@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@box-controller/shared": "workspace:*",
+    "@expo/vector-icons": "^15.1.1",
     "@react-native-community/slider": "^5.2.0",
     "expo": "~57.0.13",
     "expo-constants": "~57.0.11",
