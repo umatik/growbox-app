@@ -1,35 +1,29 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import AppShell from "@/components/AppShell";
-import AutoMode from "@/components/AutoMode";
+import ModeTabs from "@/components/ModeTabs";
 import ManualMode from "@/components/ManualMode";
-import ModeTabs, { Mode } from "@/components/ModeTabs";
+import AutoMode from "@/components/AutoMode";
+import { COLORS } from "@/constants/Colors";
+import { useBoxStore } from "@/store";
 
 export default function ModeScreen() {
-  const [mode, setMode] = useState<Mode>("MANUAL");
+  const mode = useBoxStore((state) => state.mode);
+  const setMode = useBoxStore((state) => state.setMode);
 
   return (
     <AppShell title="Mode" showModeButton={false}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <View style={styles.container}>
         <ModeTabs mode={mode} onChange={setMode} />
-
-        <View style={styles.modeContent}>
-          {mode === "MANUAL" ? <ManualMode /> : <AutoMode />}
-        </View>
-      </ScrollView>
+        {mode === "MANUAL" ? <ManualMode /> : <AutoMode />}
+      </View>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 24,
-  },
-
-  modeContent: {
-    marginHorizontal: 16,
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.background,
   },
 });

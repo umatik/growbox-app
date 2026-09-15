@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { COLORS } from "@/constants/Colors";
 import RangeControl from "@/components/RangeControl";
+import FloweringStart from "@/components/FloweringStart";
 
 export default function AutoMode() {
   const [nightFanEnabled, setNightFanEnabled] = useState(true);
@@ -13,59 +14,34 @@ export default function AutoMode() {
     <View style={styles.container}>
       <View style={styles.heading}>
         <Text style={styles.title}>Auto mode</Text>
-        <Text style={styles.subtitle}>
-          Automated growing schedule.
-        </Text>
+        <Text style={styles.subtitle}>Automated growing schedule.</Text>
       </View>
+
+      <FloweringStart />
+
+      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanSpeed} />
 
       <View style={styles.controlCard}>
         <View style={styles.iconBox}>
-          <Ionicons name="leaf-outline" size={25} color={COLORS.green} />
-        </View>
-
-        <View style={styles.controlText}>
-          <Text style={styles.controlTitle}>Flowering start</Text>
-          <Text style={styles.status}>2026-09-06, Week 1</Text>
-        </View>
-
-        <Ionicons
-          name="close-circle"
-          size={30}
-          color={COLORS.red}
-        />
-      </View>
-
-      <RangeControl
-        label="Fan speed"
-        value={fanSpeed}
-        onChange={setFanSpeed}
-      />
-
-      <View style={styles.controlCard}>
-        <View style={styles.iconBox}>
-          <Ionicons
-            name="moon-outline"
-            size={25}
-            color={COLORS.blue}
-          />
+          <Ionicons name="moon-outline" size={25} color={COLORS.blue} />
         </View>
 
         <View style={styles.controlText}>
           <Text style={styles.controlTitle}>Night fan</Text>
-          <Text style={styles.status}>
-            {nightFanEnabled ? "ON" : "OFF"}
-          </Text>
+          <Text style={styles.status}>{nightFanEnabled ? "ON" : "OFF"}</Text>
         </View>
 
-        <Switch
-          value={nightFanEnabled}
-          onValueChange={setNightFanEnabled}
-          trackColor={{
-            false: COLORS.surfaceLight,
-            true: COLORS.greenDark,
-          }}
-          thumbColor={COLORS.text}
-        />
+        <View style={styles.switchBox}>
+          <Switch
+            value={nightFanEnabled}
+            onValueChange={setNightFanEnabled}
+            trackColor={{
+              false: COLORS.surfaceLight,
+              true: COLORS.greenDark,
+            }}
+            thumbColor={COLORS.text}
+          />
+        </View>
       </View>
 
       <RangeControl
@@ -76,29 +52,21 @@ export default function AutoMode() {
 
       <View style={styles.controlCard}>
         <View style={styles.iconBox}>
-          <Ionicons
-            name="time-outline"
-            size={25}
-            color={COLORS.text}
-          />
+          <Ionicons name="time-outline" size={25} color={COLORS.text} />
         </View>
 
         <View style={styles.controlText}>
           <Text style={styles.controlTitle}>Scheduler</Text>
-          <Text style={styles.status}>
-            ON: 18:00   OFF: 06:00
-          </Text>
+          <Text style={styles.status}>ON: 18:00 OFF: 06:00</Text>
         </View>
 
-        <Ionicons
-          name="chevron-forward-outline"
-          size={22}
-          color={COLORS.textMuted}
-        />
-      </View>
-
-      <View style={styles.saveButton}>
-        <Text style={styles.saveText}>Save</Text>
+        <View style={styles.switchBox}>
+          <Ionicons
+            name="chevron-forward-outline"
+            size={22}
+            color={COLORS.textMuted}
+          />
+        </View>
       </View>
     </View>
   );
@@ -128,7 +96,8 @@ const styles = StyleSheet.create({
 
   controlCard: {
     minHeight: 66,
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 20,
     borderRadius: 14,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -139,12 +108,15 @@ const styles = StyleSheet.create({
 
   iconBox: {
     width: 34,
+    height: 40,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   controlText: {
     flex: 1,
     marginLeft: 8,
+    justifyContent: "center",
   },
 
   controlTitle: {
@@ -159,18 +131,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  saveButton: {
-    height: 50,
-    marginTop: 4,
-    borderRadius: 14,
-    backgroundColor: COLORS.green,
+  switchBox: {
+    width: 52,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  saveText: {
-    color: "#001515",
-    fontSize: 15,
-    fontWeight: "700",
   },
 });
