@@ -33,16 +33,6 @@ export default function AppShell({
             <Text style={styles.modeValue}>{mode}</Text>
           </View>
         )}
-
-        {showModeButton && (
-          <TouchableOpacity
-            style={styles.modeButton}
-            onPress={onModePress}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="options-outline" size={27} color={COLORS.text} />
-          </TouchableOpacity>
-        )}
       </View>
 
       {children}

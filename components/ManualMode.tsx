@@ -1,8 +1,10 @@
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
-import RangeControl from "@/components/RangeControl";
 import { useBoxStore } from "@/store";
+import DisplayControl from "@/components/controlers/DisplayControl";
+import RangeControl from "@/components/controlers/RangeControl";
+import SwitchControl from "@/components/controlers/SwitchControl";
 
 export default function ManualMode() {
   const lightEnabled = useBoxStore((state) => state.devices.light);
@@ -22,76 +24,25 @@ export default function ManualMode() {
         <Text style={styles.subtitle}>Control everything manually.</Text>
       </View>
 
-      <View style={styles.controlCard}>
-        <View style={styles.iconBox}>
-          <Ionicons name="bulb-outline" size={25} color={COLORS.yellow} />
-        </View>
-        <View style={styles.controlText}>
-          <Text style={styles.controlTitle}>Light</Text>
-          <Text style={styles.status}>{lightEnabled ? "ON" : "OFF"}</Text>
-        </View>
-        <View style={styles.switchBox}>
-          <Switch
-            value={lightEnabled}
-            onValueChange={setLight}
-            trackColor={{ false: COLORS.surfaceLight, true: COLORS.greenDark }}
-            thumbColor={COLORS.text}
-          />
-        </View>
-      </View>
-
-      <View style={styles.controlCard}>
-        <View style={styles.iconBox}>
-          <Ionicons name="aperture-outline" size={25} color={COLORS.blue} />
-        </View>
-        <View style={styles.controlText}>
-          <Text style={styles.controlTitle}>Fan</Text>
-          <Text style={styles.status}>{fanEnabled ? "ON" : "OFF"}</Text>
-        </View>
-        <View style={styles.switchBox}>
-          <Switch
-            value={fanEnabled}
-            onValueChange={setFan}
-            trackColor={{ false: COLORS.surfaceLight, true: COLORS.greenDark }}
-            thumbColor={COLORS.text}
-          />
-        </View>
-      </View>
-
-      <RangeControl
-        label="Fan speed"
-        value={fanSpeed}
-        onChange={setFanSpeed}
+      <SwitchControl
+        title="Light"
+        value={lightEnabled}
+        onChange={setLight}
+        icon="bulb-outline"
+        iconColor={COLORS.yellow}
       />
 
-      <View style={styles.controlCard}>
-        <View style={styles.iconBox}>
-          <Ionicons name="desktop-outline" size={25} color={COLORS.blue} />
-        </View>
-        <View style={styles.controlText}>
-          <Text style={styles.controlTitle}>Display</Text>
-          <Text style={styles.status}>{displayEnabled ? "ON" : "OFF"}</Text>
-        </View>
-        <View style={styles.switchBox}>
-          <Switch
-            value={displayEnabled}
-            onValueChange={setDisplay}
-            trackColor={{ false: COLORS.surfaceLight, true: COLORS.greenDark }}
-            thumbColor={COLORS.text}
-          />
-        </View>
-      </View>
+      <SwitchControl
+        title="Fan"
+        value={fanEnabled}
+        onChange={setFan}
+        icon="aperture-outline"
+        iconColor={COLORS.blue}
+      />
 
-      <View style={styles.infoCard}>
-        <Ionicons
-          name="information-circle-outline"
-          size={25}
-          color={COLORS.blue}
-        />
-        <Text style={styles.infoText}>
-          Manual mode gives you full control over all devices.
-        </Text>
-      </View>
+      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanSpeed} />
+
+      <DisplayControl />
     </View>
   );
 }

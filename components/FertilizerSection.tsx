@@ -5,8 +5,7 @@ import { useBoxStore } from "@/store";
 
 export default function FertilizerSection() {
   const currentWeek = useBoxStore((state) => state.flowering.currentWeek);
-  const tableWeek = currentWeek + 2;
-  const fertilizers = FERTILIZER_SCHEDULE[tableWeek] ?? [];
+  const fertilizers = FERTILIZER_SCHEDULE[currentWeek] ?? [];
 
   return (
     <View style={styles.container}>
@@ -52,7 +51,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  title: { color: COLORS.text, fontSize: 17, lineHeight: 24, fontWeight: "600" },
+  title: {
+    color: COLORS.text,
+    fontSize: 17,
+    lineHeight: 24,
+    fontWeight: "600",
+  },
   week: { color: COLORS.cyan, fontSize: 14, fontWeight: "600" },
   list: { marginTop: 18 },
   row: {

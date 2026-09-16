@@ -1,29 +1,20 @@
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import AppShell from "@/components/AppShell";
 import { COLORS } from "@/constants/Colors";
+import ModeTabs from "@/components/ModeTabs";
+import ManualMode from "@/components/ManualMode";
+import AutoMode from "@/components/AutoMode";
+import { useBoxStore } from "@/store";
 
 export default function AboutScreen() {
+  const mode = useBoxStore((state) => state.mode);
+  const setMode = useBoxStore((state) => state.setMode);
+
   return (
-    <AppShell title="About" showModeButton={false}>
+    <AppShell title="Settings" showModeButton={false}>
       <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Box Panel</Text>
-          <Text style={styles.subtitle}>Grow Controller</Text>
-        </View>
-
-        <Text style={styles.section}>Device information</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.row}>Firmware version        1.0.0</Text>
-          <Text style={styles.row}>Connection status       Connected</Text>
-          <Text style={styles.row}>Uptime                  3 days, 4 hours</Text>
-        </View>
-
-        <Text style={styles.section}>App information</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.row}>App version             1.0.0</Text>
-        </View>
+        <ModeTabs mode={mode} onChange={setMode} />
+        {mode === "MANUAL" ? <ManualMode /> : <AutoMode />}
       </View>
     </AppShell>
   );
