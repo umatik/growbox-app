@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ios",
-    "slug": "ios",
+    "name": "Box",
+    "slug": "boxpanel",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pl.umatik.boxpanel"
+      "bundleIdentifier": "pl.umatik.boxpanel",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -39,6 +42,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "239afe08-0f47-4792-a0d9-a9a72f62ad1a"
+      }
     }
   }
 }

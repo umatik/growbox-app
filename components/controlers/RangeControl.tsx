@@ -1,5 +1,11 @@
-import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from "react-native";
-import { useMemo, useState } from "react";
+import {
+  LayoutChangeEvent,
+  PanResponder,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "@/constants/Colors";
 
 interface RangeControlProps {
@@ -22,18 +28,27 @@ export default function RangeControl({
   unit = "%",
 }: RangeControlProps) {
   const [width, setWidth] = useState(0);
+  const [localValue, setLocalValue] = useState(value);
 
-  const percentage = ((value - min) / (max - min)) * 100;
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const percentage = ((localValue - min) / (max - min)) * 100;
 
   const updateFromX = (x: number) => {
     if (!width) return;
 
     const clampedX = Math.max(0, Math.min(width, x));
-    const rawValue = min + (clampedX / width) * (max - min);
-    const steppedValue =
-      Math.round((rawValue - min) / step) * step + min;
 
-    onChange(Math.max(min, Math.min(max, steppedValue)));
+    const rawValue = min + (clampedX / width) * (max - min);
+
+    const steppedValue = Math.round((rawValue - min) / step) * step + min;
+
+    const nextValue = Math.max(min, Math.min(max, steppedValue));
+
+    setLocalValue(nextValue);
+    onChange(nextValue);
   };
 
   const panResponder = useMemo(
@@ -41,9 +56,11 @@ export default function RangeControl({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+
         onPanResponderGrant: (event) => {
           updateFromX(event.nativeEvent.locationX);
         },
+
         onPanResponderMove: (event) => {
           updateFromX(event.nativeEvent.locationX);
         },
@@ -59,8 +76,9 @@ export default function RangeControl({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.label}>{label}</Text>
+
         <Text style={styles.value}>
-          {value}
+          {localValue}
           {unit}
         </Text>
       </View>
@@ -94,10 +112,13 @@ export default function RangeControl({
 
       <View style={styles.scale}>
         <Text style={styles.scaleText}>
-          {min}{unit}
+          {min}
+          {unit}
         </Text>
+
         <Text style={styles.scaleText}>
-          {max}{unit}
+          {max}
+          {unit}
         </Text>
       </View>
     </View>
