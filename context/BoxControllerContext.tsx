@@ -1,11 +1,28 @@
-import { createContext, ReactNode, useCallback, useContext } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import useEsp from "@box-controller/shared/hooks/useEsp";
 import { EspResponse } from "@box-controller/shared/interfaces/esp.interface";
 import { useBoxStore } from "@/store";
 
 type BoxController = ReturnType<typeof useEsp>;
 
-const BoxControllerContext = createContext<BoxController | null>(null);
+interface BoxControllerContextValue extends BoxController {
+  initialLoading: boolean;
+  connectionDismissed: boolean;
+  dismissConnectionError: () => void;
+  reloadConnection: () => Promise<void>;
+  tabsDisabled: boolean;
+}
+
+const BoxControllerContext = createContext<BoxControllerContextValue | null>(
+  null,
+);
 
 interface BoxControllerProviderProps {
   children: ReactNode;
@@ -14,16 +31,32 @@ interface BoxControllerProviderProps {
 export function BoxControllerProvider({
   children,
 }: BoxControllerProviderProps) {
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [connectionDismissed, setConnectionDismissed] = useState(false);
+
   const setMode = useBoxStore((state) => state.setMode);
+
+  const setLastConnectedMode = useBoxStore(
+    (state) => state.setLastConnectedMode,
+  );
+
   const setState = useBoxStore((state) => state.setState);
+
   const setSensor = useBoxStore((state) => state.setSensor);
+
   const setDisplay = useBoxStore((state) => state.setDisplay);
+
   const setLight = useBoxStore((state) => state.setLight);
+
   const setFan = useBoxStore((state) => state.setFan);
+
   const setNightFanEnabled = useBoxStore((state) => state.setNightFanEnabled);
 
   const handleResponse = useCallback(
     (response: EspResponse) => {
+      setConnectionDismissed(false);
+
+      setLastConnectedMode(response.status.mode);
       setMode(response.status.mode);
       setState(response.status.state);
 
@@ -34,12 +67,15 @@ export function BoxControllerProvider({
       });
 
       setDisplay(Boolean(response.config.display.enabled));
+
       setLight(Boolean(response.config.relayLight.state));
+
       setFan(Boolean(response.config.relayFan.state));
 
       setNightFanEnabled(Boolean(response.config.auto.nightFan.enabled));
     },
     [
+      setLastConnectedMode,
       setMode,
       setState,
       setSensor,
@@ -56,8 +92,54 @@ export function BoxControllerProvider({
     onResponse: handleResponse,
   });
 
+  useEffect(() => {
+    const loadInitialConfig = async () => {
+      try {
+        await controller.fetchConfig();
+      } catch {
+        // Error is available through controller.error.
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    void loadInitialConfig();
+  }, [controller.fetchConfig]);
+
+  const reloadConnection = useCallback(async () => {
+    setConnectionDismissed(false);
+    setInitialLoading(true);
+
+    try {
+      await controller.fetchConfig();
+    } catch {
+      // Error is available through controller.error.
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [controller.fetchConfig]);
+
+  const dismissConnectionError = useCallback(() => {
+    setConnectionDismissed(true);
+  }, []);
+
+  const tabsDisabled =
+    initialLoading ||
+    controller.loading ||
+    Boolean(controller.error) ||
+    connectionDismissed;
+
+  const contextValue: BoxControllerContextValue = {
+    ...controller,
+    initialLoading,
+    connectionDismissed,
+    dismissConnectionError,
+    reloadConnection,
+    tabsDisabled,
+  };
+
   return (
-    <BoxControllerContext.Provider value={controller}>
+    <BoxControllerContext.Provider value={contextValue}>
       {children}
     </BoxControllerContext.Provider>
   );

@@ -54,15 +54,6 @@ export default function FloweringSchedule({
                   {completed ? "✓" : week}
                 </Text>
               </View>
-              <Text
-                style={[
-                  styles.weekLabel,
-                  flushWeek && styles.flushWeekLabel,
-                  harvestWeek && styles.harvestWeekLabel,
-                ]}
-              >
-                {week}
-              </Text>
             </View>
           );
         })}

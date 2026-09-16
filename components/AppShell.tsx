@@ -8,17 +8,15 @@ import { useBoxStore } from "@/store";
 interface AppShellProps {
   children: ReactNode;
   title: string;
-  showModeButton?: boolean;
-  showModeStatus?: boolean;
-  onModePress?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export default function AppShell({
   children,
   title,
-  showModeButton = true,
-  showModeStatus = true,
-  onModePress,
+  onRefresh,
+  refreshing = false,
 }: AppShellProps) {
   const mode = useBoxStore((state) => state.mode);
 
@@ -27,11 +25,24 @@ export default function AppShell({
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
 
-        {showModeStatus && (
-          <View style={styles.modeStatus}>
-            <Text style={styles.modeLabel}>MODE</Text>
-            <Text style={styles.modeValue}>{mode}</Text>
-          </View>
+        <View style={styles.modeStatus}>
+          <Text style={styles.modeLabel}>MODE</Text>
+          <Text style={styles.modeValue}>{mode}</Text>
+        </View>
+
+        {onRefresh && (
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={onRefresh}
+            disabled={refreshing}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={22}
+              color={refreshing ? COLORS.textMuted : COLORS.text}
+            />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -80,7 +91,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  modeButton: {
+  refreshButton: {
     width: 44,
     height: 44,
     alignItems: "center",

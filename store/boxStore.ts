@@ -35,6 +35,7 @@ export interface SchedulerState {
 
 interface BoxStore {
   mode: BoxMode;
+  lastConnectedMode: BoxMode | null;
   state: BoxState;
   sensor: SensorState;
   devices: DeviceState;
@@ -43,6 +44,7 @@ interface BoxStore {
   scheduler: SchedulerState;
 
   setMode: (mode: BoxMode) => void;
+  setLastConnectedMode: (mode: BoxMode) => void;
   setState: (state: BoxState) => void;
   setSensor: (sensor: Partial<SensorState>) => void;
 
@@ -63,6 +65,7 @@ interface BoxStore {
 
 const initialState = {
   mode: "MANUAL" as BoxMode,
+  lastConnectedMode: null,
 
   state: "DAY" as BoxState,
 
@@ -101,6 +104,7 @@ export const useBoxStore = create<BoxStore>((set) => ({
   ...initialState,
 
   setMode: (mode) => set({ mode }),
+  setLastConnectedMode: (mode) => set({ lastConnectedMode: mode }),
 
   setState: (state) => set({ state }),
 

@@ -3,9 +3,7 @@ import { DarkTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-import { useColorScheme } from "@/components/useColorScheme";
 import "../global.css";
-import useBoxController from "@/hooks/useBoxController";
 import { BoxControllerProvider } from "@/context/BoxControllerContext";
 
 export { ErrorBoundary } from "expo-router";
@@ -13,8 +11,6 @@ export { ErrorBoundary } from "expo-router";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useBoxController();
-
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });

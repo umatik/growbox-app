@@ -27,7 +27,7 @@ export default function FertilizerSection() {
               {fertilizer.name}
             </Text>
             <Text style={[styles.dosage, { color: fertilizer.color }]}>
-              {fertilizer.dosage == null ? "—" : `${fertilizer.dosage} ml/L`}
+              {fertilizer.dosage == null ? "—" : `${fertilizer.dosage} ml`}
             </Text>
           </View>
         ))}
