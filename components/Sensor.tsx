@@ -1,20 +1,22 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
+import { useBoxStore } from "@/store";
 
-interface SensorProps {
-  temperature?: number | null;
-  humidity?: number | null;
-}
+export default function Sensor() {
+  const temperature = useBoxStore((state) => state.sensor.temperature);
+  const humidity = useBoxStore((state) => state.sensor.humidity);
+  const light = useBoxStore((state) => state.devices.light);
 
-export default function Sensor({
-  temperature = 17.1,
-  humidity = 61.5,
-}: SensorProps) {
   return (
     <View style={styles.container}>
       <View style={styles.sensor}>
-        <Ionicons name="sunny-outline" size={42} color={COLORS.yellow} />
+        <Ionicons
+          name={light ? "sunny-outline" : "moon-outline"}
+          size={40}
+          color={light ? COLORS.yellow : COLORS.text}
+        />
+
         <View>
           <Text style={styles.value}>
             {temperature == null ? "--" : `${temperature.toFixed(1)}°C`}
@@ -26,7 +28,8 @@ export default function Sensor({
       <View style={styles.divider} />
 
       <View style={styles.sensor}>
-        <Ionicons name="water-outline" size={42} color={COLORS.blue} />
+        <Ionicons name="water-outline" size={40} color={COLORS.blue} />
+
         <View>
           <Text style={styles.value}>
             {humidity == null ? "--" : `${humidity.toFixed(1)}%`}

@@ -52,13 +52,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
-      <Tabs.Screen
-        name="mode"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

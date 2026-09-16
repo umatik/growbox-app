@@ -1,15 +1,21 @@
 import { StyleSheet, Text, View } from "react-native";
-import { useState } from "react";
 import { COLORS } from "@/constants/Colors";
 import FloweringStart from "@/components/FloweringStart";
 import RangeControl from "@/components/controlers/RangeControl";
 import SwitchControl from "@/components/controlers/SwitchControl";
 import DisplayControl from "@/components/controlers/DisplayControl";
+import { useBoxControllerContext } from "@/context/BoxControllerContext";
+import { useBoxStore } from "@/store";
 
 export default function AutoMode() {
-  const [nightFanEnabled, setNightFanEnabled] = useState(true);
-  const [fanSpeed, setFanSpeed] = useState(50);
-  const [nightFanSpeed, setNightFanSpeed] = useState(30);
+  const nightFanEnabled = useBoxStore((state) => state.auto.nightFanEnabled);
+
+  const fanSpeed = useBoxStore((state) => state.devices.fanSpeed);
+
+  const nightFanSpeed = useBoxStore((state) => state.devices.nightFanSpeed);
+
+  const { toggleNightFan, setFanLevel, setNightFanLevel } =
+    useBoxControllerContext();
 
   return (
     <View style={styles.container}>
@@ -20,12 +26,12 @@ export default function AutoMode() {
 
       <FloweringStart />
 
-      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanSpeed} />
+      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanLevel} />
 
       <SwitchControl
         title="Night fan"
         value={nightFanEnabled}
-        onChange={setNightFanEnabled}
+        onChange={() => toggleNightFan()}
         icon="moon-outline"
         iconColor={COLORS.blue}
       />
@@ -33,7 +39,7 @@ export default function AutoMode() {
       <RangeControl
         label="Night fan speed"
         value={nightFanSpeed}
-        onChange={setNightFanSpeed}
+        onChange={setNightFanLevel}
       />
 
       <DisplayControl />

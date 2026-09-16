@@ -2,10 +2,11 @@ import { StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
+import { useBoxControllerContext } from "@/context/BoxControllerContext";
 
 const DisplayControl = () => {
   const displayEnabled = useBoxStore((state) => state.devices.display);
-  const setDisplay = useBoxStore((state) => state.setDisplay);
+  const { toggleDisplay } = useBoxControllerContext();
 
   return (
     <View>
@@ -20,7 +21,7 @@ const DisplayControl = () => {
         <View style={styles.switchBox}>
           <Switch
             value={displayEnabled}
-            onValueChange={setDisplay}
+            onValueChange={() => toggleDisplay()}
             trackColor={{ false: COLORS.surfaceLight, true: COLORS.greenDark }}
             thumbColor={COLORS.text}
           />

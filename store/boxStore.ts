@@ -18,6 +18,10 @@ export interface DeviceState {
   nightFanSpeed: number;
 }
 
+export interface AutoState {
+  nightFanEnabled: boolean;
+}
+
 export interface FloweringState {
   startDate: string | null;
   currentWeek: number;
@@ -34,31 +38,40 @@ interface BoxStore {
   state: BoxState;
   sensor: SensorState;
   devices: DeviceState;
+  auto: AutoState;
   flowering: FloweringState;
   scheduler: SchedulerState;
 
   setMode: (mode: BoxMode) => void;
   setState: (state: BoxState) => void;
   setSensor: (sensor: Partial<SensorState>) => void;
+
   setLight: (enabled: boolean) => void;
   setFan: (enabled: boolean) => void;
   setDisplay: (enabled: boolean) => void;
   setDimmerEnabled: (enabled: boolean) => void;
   setFanSpeed: (speed: number) => void;
   setNightFanSpeed: (speed: number) => void;
+
+  setNightFanEnabled: (enabled: boolean) => void;
+
   setFlowering: (flowering: Partial<FloweringState>) => void;
   setScheduler: (scheduler: Partial<SchedulerState>) => void;
+
   reset: () => void;
 }
 
 const initialState = {
   mode: "MANUAL" as BoxMode,
+
   state: "DAY" as BoxState,
+
   sensor: {
     temperature: null,
     humidity: null,
     ts: null,
   },
+
   devices: {
     light: false,
     fan: false,
@@ -67,11 +80,17 @@ const initialState = {
     fanSpeed: 50,
     nightFanSpeed: 30,
   },
+
+  auto: {
+    nightFanEnabled: false,
+  },
+
   flowering: {
     startDate: null,
     currentWeek: 1,
     progress: 0,
   },
+
   scheduler: {
     on: "18:00",
     off: "06:00",
@@ -87,47 +106,82 @@ export const useBoxStore = create<BoxStore>((set) => ({
 
   setSensor: (sensor) =>
     set((current) => ({
-      sensor: { ...current.sensor, ...sensor },
+      sensor: {
+        ...current.sensor,
+        ...sensor,
+      },
     })),
 
   setLight: (enabled) =>
     set((current) => ({
-      devices: { ...current.devices, light: enabled },
+      devices: {
+        ...current.devices,
+        light: enabled,
+      },
     })),
 
   setFan: (enabled) =>
     set((current) => ({
-      devices: { ...current.devices, fan: enabled },
+      devices: {
+        ...current.devices,
+        fan: enabled,
+      },
     })),
 
   setDisplay: (enabled) =>
     set((current) => ({
-      devices: { ...current.devices, display: enabled },
+      devices: {
+        ...current.devices,
+        display: enabled,
+      },
     })),
 
   setDimmerEnabled: (enabled) =>
     set((current) => ({
-      devices: { ...current.devices, dimmerEnabled: enabled },
+      devices: {
+        ...current.devices,
+        dimmerEnabled: enabled,
+      },
     })),
 
   setFanSpeed: (speed) =>
     set((current) => ({
-      devices: { ...current.devices, fanSpeed: speed },
+      devices: {
+        ...current.devices,
+        fanSpeed: speed,
+      },
     })),
 
   setNightFanSpeed: (speed) =>
     set((current) => ({
-      devices: { ...current.devices, nightFanSpeed: speed },
+      devices: {
+        ...current.devices,
+        nightFanSpeed: speed,
+      },
+    })),
+
+  setNightFanEnabled: (enabled) =>
+    set((current) => ({
+      auto: {
+        ...current.auto,
+        nightFanEnabled: enabled,
+      },
     })),
 
   setFlowering: (flowering) =>
     set((current) => ({
-      flowering: { ...current.flowering, ...flowering },
+      flowering: {
+        ...current.flowering,
+        ...flowering,
+      },
     })),
 
   setScheduler: (scheduler) =>
     set((current) => ({
-      scheduler: { ...current.scheduler, ...scheduler },
+      scheduler: {
+        ...current.scheduler,
+        ...scheduler,
+      },
     })),
 
   reset: () => set(initialState),

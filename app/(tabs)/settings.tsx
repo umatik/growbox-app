@@ -5,15 +5,16 @@ import ModeTabs from "@/components/ModeTabs";
 import ManualMode from "@/components/ManualMode";
 import AutoMode from "@/components/AutoMode";
 import { useBoxStore } from "@/store";
+import { useBoxControllerContext } from "@/context/BoxControllerContext";
 
 export default function AboutScreen() {
   const mode = useBoxStore((state) => state.mode);
-  const setMode = useBoxStore((state) => state.setMode);
+  const { toggleMode } = useBoxControllerContext();
 
   return (
     <AppShell title="Settings" showModeButton={false}>
       <View style={styles.container}>
-        <ModeTabs mode={mode} onChange={setMode} />
+        <ModeTabs mode={mode} onChange={toggleMode} />
         {mode === "MANUAL" ? <ManualMode /> : <AutoMode />}
       </View>
     </AppShell>
