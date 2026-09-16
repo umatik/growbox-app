@@ -4,17 +4,19 @@ import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import FloweringSchedule from "@/components/FloweringSchedule";
 import FertilizerSection from "@/components/FertilizerSection";
+import { useBoxControllerContext } from "@/context/BoxControllerContext";
 
 export default function FloweringRequired() {
   const mode = useBoxStore((state) => state.mode);
   const startDate = useBoxStore((state) => state.flowering.startDate);
-
   const setFlowering = useBoxStore((state) => state.setFlowering);
-
   const setMode = useBoxStore((state) => state.setMode);
+  const { toggleMode } = useBoxControllerContext();
 
   const handleStart = () => {
     const date = new Date().toISOString().slice(0, 10);
+
+    setMode("AUTO");
 
     setFlowering({
       startDate: date,
@@ -23,8 +25,12 @@ export default function FloweringRequired() {
     });
   };
 
-  const handleEnableAuto = () => {
-    setMode("AUTO");
+  const handleEnableAuto = async () => {
+    if (mode === "AUTO") {
+      return;
+    }
+
+    await toggleMode();
   };
 
   if (mode !== "AUTO") {
@@ -41,7 +47,7 @@ export default function FloweringRequired() {
         </Text>
 
         <Pressable style={styles.startButton} onPress={handleEnableAuto}>
-          <Ionicons name="leaf-outline" size={23} color={COLORS.text} />
+          <Ionicons name="leaf-outline" size={23} color={COLORS.surfaceLight} />
 
           <Text style={styles.startButtonText}>Turn on Auto mode</Text>
         </Pressable>
@@ -64,7 +70,7 @@ export default function FloweringRequired() {
         </Text>
 
         <Pressable style={styles.startButton} onPress={handleStart}>
-          <Ionicons name="leaf-outline" size={23} color={COLORS.text} />
+          <Ionicons name="leaf-outline" size={23} color={COLORS.surfaceLight} />
 
           <Text style={styles.startButtonText}>Start flowering</Text>
         </Pressable>
@@ -130,7 +136,7 @@ const styles = StyleSheet.create({
   },
 
   startButtonText: {
-    color: COLORS.text,
+    color: COLORS.surfaceLight,
     fontSize: 15,
     fontWeight: "700",
   },

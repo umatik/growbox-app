@@ -119,15 +119,33 @@ export function BoxControllerProvider({
     }
   }, [controller.fetchConfig]);
 
+  useEffect(() => {
+    if (initialLoading || connectionDismissed || controller.error) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void controller.fetchConfig().catch(() => {
+        // Error is available through controller.error.
+      });
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    controller.fetchConfig,
+    controller.error,
+    initialLoading,
+    connectionDismissed,
+  ]);
+
   const dismissConnectionError = useCallback(() => {
     setConnectionDismissed(true);
   }, []);
 
   const tabsDisabled =
-    initialLoading ||
-    controller.loading ||
-    Boolean(controller.error) ||
-    connectionDismissed;
+    initialLoading || Boolean(controller.error) || connectionDismissed;
 
   const contextValue: BoxControllerContextValue = {
     ...controller,

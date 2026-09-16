@@ -12,7 +12,7 @@ export default function AboutScreen() {
   const { toggleMode } = useBoxControllerContext();
 
   return (
-    <AppShell title="Settings" showModeButton={false}>
+    <AppShell title="Settings">
       <View style={styles.container}>
         <ModeTabs mode={mode} onChange={toggleMode} />
         {mode === "MANUAL" ? <ManualMode /> : <AutoMode />}
