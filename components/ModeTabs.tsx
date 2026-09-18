@@ -21,12 +21,7 @@ export default function ModeTabs({ mode, onChange }: ModeTabsProps) {
           size={22}
           color={mode === "MANUAL" ? COLORS.green : COLORS.textMuted}
         />
-        <Text
-          style={[
-            styles.label,
-            mode === "MANUAL" && styles.activeLabel,
-          ]}
-        >
+        <Text style={[styles.label, mode === "MANUAL" && styles.activeLabel]}>
           Manual
         </Text>
       </Pressable>
@@ -40,12 +35,7 @@ export default function ModeTabs({ mode, onChange }: ModeTabsProps) {
           size={22}
           color={mode === "AUTO" ? COLORS.green : COLORS.textMuted}
         />
-        <Text
-          style={[
-            styles.label,
-            mode === "AUTO" && styles.activeLabel,
-          ]}
-        >
+        <Text style={[styles.label, mode === "AUTO" && styles.activeLabel]}>
           Auto
         </Text>
       </Pressable>
@@ -55,7 +45,6 @@ export default function ModeTabs({ mode, onChange }: ModeTabsProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
     padding: 2,
     flexDirection: "row",
     borderRadius: 14,

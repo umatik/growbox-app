@@ -35,22 +35,17 @@ export function BoxControllerProvider({
   const [connectionDismissed, setConnectionDismissed] = useState(false);
 
   const setMode = useBoxStore((state) => state.setMode);
-
   const setLastConnectedMode = useBoxStore(
     (state) => state.setLastConnectedMode,
   );
-
   const setState = useBoxStore((state) => state.setState);
-
   const setSensor = useBoxStore((state) => state.setSensor);
-
   const setDisplay = useBoxStore((state) => state.setDisplay);
-
   const setLight = useBoxStore((state) => state.setLight);
-
   const setFan = useBoxStore((state) => state.setFan);
-
   const setNightFanEnabled = useBoxStore((state) => state.setNightFanEnabled);
+
+  const setFlowering = useBoxStore((state) => state.setFlowering);
 
   const handleResponse = useCallback(
     (response: EspResponse) => {
@@ -67,12 +62,13 @@ export function BoxControllerProvider({
       });
 
       setDisplay(Boolean(response.config.display.enabled));
-
       setLight(Boolean(response.config.relayLight.state));
-
       setFan(Boolean(response.config.relayFan.state));
-
       setNightFanEnabled(Boolean(response.config.auto.nightFan.enabled));
+
+      setFlowering({
+        startDate: response.config.auto.floweringStartDate,
+      });
     },
     [
       setLastConnectedMode,
@@ -83,6 +79,7 @@ export function BoxControllerProvider({
       setLight,
       setFan,
       setNightFanEnabled,
+      setFlowering,
     ],
   );
 
@@ -130,9 +127,7 @@ export function BoxControllerProvider({
       });
     }, 5000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [
     controller.fetchConfig,
     controller.error,
@@ -147,8 +142,16 @@ export function BoxControllerProvider({
   const tabsDisabled =
     initialLoading || Boolean(controller.error) || connectionDismissed;
 
+  const setFloweringStartDate = useCallback(
+    async (date: string | null) => {
+      await controller.setFloweringStartDate(date);
+    },
+    [controller.setFloweringStartDate],
+  );
+
   const contextValue: BoxControllerContextValue = {
     ...controller,
+    setFloweringStartDate,
     initialLoading,
     connectionDismissed,
     dismissConnectionError,

@@ -2,14 +2,18 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
+import { useBoxControllerContext } from "@/context/BoxControllerContext";
 
 export default function FloweringStart() {
   const startDate = useBoxStore((state) => state.flowering.startDate);
 
   const setFlowering = useBoxStore((state) => state.setFlowering);
+  const { setFloweringStartDate } = useBoxControllerContext();
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const date = new Date().toISOString().slice(0, 10);
+
+    await setFloweringStartDate(date);
 
     setFlowering({
       startDate: date,
@@ -18,7 +22,9 @@ export default function FloweringStart() {
     });
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    await setFloweringStartDate(null);
+
     setFlowering({
       startDate: null,
       currentWeek: 1,
@@ -29,7 +35,7 @@ export default function FloweringStart() {
   if (!startDate) {
     return (
       <Pressable style={styles.startButton} onPress={handleStart}>
-        <Ionicons name="leaf-outline" size={25} color={COLORS.text} />
+        <Ionicons name="leaf-outline" size={25} color={COLORS.surfaceLight} />
 
         <Text style={styles.startButtonText}>Start flowering</Text>
       </Pressable>
@@ -69,7 +75,7 @@ const styles = StyleSheet.create({
   },
 
   startButtonText: {
-    color: COLORS.text,
+    color: COLORS.surface,
     fontSize: 16,
     fontWeight: "700",
   },

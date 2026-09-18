@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
@@ -11,10 +11,12 @@ export default function FloweringRequired() {
   const startDate = useBoxStore((state) => state.flowering.startDate);
   const setFlowering = useBoxStore((state) => state.setFlowering);
   const setMode = useBoxStore((state) => state.setMode);
-  const { toggleMode } = useBoxControllerContext();
+  const { toggleMode, setFloweringStartDate } = useBoxControllerContext();
 
-  const handleStart = () => {
+  const handleStart = async () => {
     const date = new Date().toISOString().slice(0, 10);
+
+    await setFloweringStartDate(date);
 
     setMode("AUTO");
 
@@ -37,7 +39,11 @@ export default function FloweringRequired() {
     return (
       <View style={styles.infoCard}>
         <View style={styles.iconCircle}>
-          <Ionicons name="leaf-outline" size={22} color={COLORS.blue} />
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.infoIcon}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.infoTitle}>Auto mode required</Text>
@@ -100,13 +106,16 @@ const styles = StyleSheet.create({
   },
 
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surfaceLight,
+    width: 220,
+    height: 220,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
+  },
+
+  infoIcon: {
+    width: "100%",
+    height: "100%",
   },
 
   infoTitle: {

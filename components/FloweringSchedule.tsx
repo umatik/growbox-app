@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { COLORS } from "@/constants/Colors";
-import { useBoxStore } from "@/store";
+import { useFloweringProgress } from "@/hooks/useFloweringProgress";
 
 interface FloweringScheduleProps {
   totalWeeks?: number;
@@ -9,8 +9,7 @@ interface FloweringScheduleProps {
 export default function FloweringSchedule({
   totalWeeks = 10,
 }: FloweringScheduleProps) {
-  const currentWeek = useBoxStore((state) => state.flowering.currentWeek);
-  const progress = useBoxStore((state) => state.flowering.progress);
+  const { currentWeek, progress } = useFloweringProgress();
 
   return (
     <View style={styles.container}>
