@@ -14,8 +14,9 @@ export interface DeviceState {
   fan: boolean;
   display: boolean;
   dimmerEnabled: boolean;
+  dayLevel: number;
+  nightLevel: number;
   fanSpeed: number;
-  nightFanSpeed: number;
 }
 
 export interface AutoState {
@@ -52,8 +53,9 @@ interface BoxStore {
   setFan: (enabled: boolean) => void;
   setDisplay: (enabled: boolean) => void;
   setDimmerEnabled: (enabled: boolean) => void;
+  setDayLevel: (level: number) => void;
+  setNightLevel: (level: number) => void;
   setFanSpeed: (speed: number) => void;
-  setNightFanSpeed: (speed: number) => void;
 
   setNightFanEnabled: (enabled: boolean) => void;
 
@@ -80,8 +82,9 @@ const initialState = {
     fan: false,
     display: true,
     dimmerEnabled: false,
+    dayLevel: 50,
+    nightLevel: 30,
     fanSpeed: 50,
-    nightFanSpeed: 30,
   },
 
   auto: {
@@ -104,7 +107,9 @@ export const useBoxStore = create<BoxStore>((set) => ({
   ...initialState,
 
   setMode: (mode) => set({ mode }),
-  setLastConnectedMode: (mode) => set({ lastConnectedMode: mode }),
+
+  setLastConnectedMode: (mode) =>
+    set({ lastConnectedMode: mode }),
 
   setState: (state) => set({ state }),
 
@@ -148,19 +153,27 @@ export const useBoxStore = create<BoxStore>((set) => ({
       },
     })),
 
+  setDayLevel: (level) =>
+    set((current) => ({
+      devices: {
+        ...current.devices,
+        dayLevel: level,
+      },
+    })),
+
+  setNightLevel: (level) =>
+    set((current) => ({
+      devices: {
+        ...current.devices,
+        nightLevel: level,
+      },
+    })),
+
   setFanSpeed: (speed) =>
     set((current) => ({
       devices: {
         ...current.devices,
         fanSpeed: speed,
-      },
-    })),
-
-  setNightFanSpeed: (speed) =>
-    set((current) => ({
-      devices: {
-        ...current.devices,
-        nightFanSpeed: speed,
       },
     })),
 

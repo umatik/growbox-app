@@ -29,8 +29,8 @@ interface BoxControllerProviderProps {
 }
 
 export function BoxControllerProvider({
-  children,
-}: BoxControllerProviderProps) {
+                                        children,
+                                      }: BoxControllerProviderProps) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [connectionDismissed, setConnectionDismissed] = useState(false);
 
@@ -43,6 +43,7 @@ export function BoxControllerProvider({
   const setDisplay = useBoxStore((state) => state.setDisplay);
   const setLight = useBoxStore((state) => state.setLight);
   const setFan = useBoxStore((state) => state.setFan);
+  const setDayLevel = useBoxStore((state) => state.setDayLevel);
   const setNightFanEnabled = useBoxStore((state) => state.setNightFanEnabled);
 
   const setFlowering = useBoxStore((state) => state.setFlowering);
@@ -64,6 +65,9 @@ export function BoxControllerProvider({
       setDisplay(Boolean(response.config.display.enabled));
       setLight(Boolean(response.config.relayLight.state));
       setFan(Boolean(response.config.relayFan.state));
+
+      setDayLevel(response.config.dimmer.day.level);
+
       setNightFanEnabled(Boolean(response.config.auto.nightFan.enabled));
 
       setFlowering({
@@ -78,6 +82,7 @@ export function BoxControllerProvider({
       setDisplay,
       setLight,
       setFan,
+      setDayLevel,
       setNightFanEnabled,
       setFlowering,
     ],

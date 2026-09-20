@@ -10,10 +10,8 @@ export default function ManualMode() {
   const { toggleLight, toggleFan, setFanLevel } = useBoxControllerContext();
 
   const lightEnabled = useBoxStore((state) => state.devices.light);
-
   const fanEnabled = useBoxStore((state) => state.devices.fan);
-
-  const fanSpeed = useBoxStore((state) => state.devices.fanSpeed);
+  const dayLevel = useBoxStore((state) => state.devices.dayLevel);
 
   return (
     <View style={styles.container}>
@@ -38,7 +36,11 @@ export default function ManualMode() {
         iconColor={COLORS.blue}
       />
 
-      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanLevel} />
+      <RangeControl
+        label="Dimmer day level"
+        value={dayLevel}
+        onChange={() => {}}
+      />
 
       <DisplayControl />
     </View>

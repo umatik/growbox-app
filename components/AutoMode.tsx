@@ -12,7 +12,7 @@ export default function AutoMode() {
 
   const fanSpeed = useBoxStore((state) => state.devices.fanSpeed);
 
-  const nightFanSpeed = useBoxStore((state) => state.devices.nightFanSpeed);
+  const nightLevel = useBoxStore((state) => state.devices.nightLevel);
 
   const { toggleNightFan, setFanLevel, setNightFanLevel } =
     useBoxControllerContext();
@@ -26,7 +26,11 @@ export default function AutoMode() {
 
       <FloweringStart />
 
-      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanLevel} />
+      <RangeControl
+        label="Fan speed"
+        value={fanSpeed}
+        onChange={setFanLevel}
+      />
 
       <SwitchControl
         title="Night fan"
@@ -37,8 +41,8 @@ export default function AutoMode() {
       />
 
       <RangeControl
-        label="Night fan speed"
-        value={nightFanSpeed}
+        label="Night dimmer level"
+        value={nightLevel}
         onChange={setNightFanLevel}
       />
 
@@ -52,14 +56,17 @@ const styles = StyleSheet.create({
     marginTop: 18,
     gap: 10,
   },
+
   heading: {
     marginBottom: 2,
   },
+
   title: {
     color: COLORS.text,
     fontSize: 20,
     fontWeight: "700",
   },
+
   subtitle: {
     marginTop: 3,
     color: COLORS.textMuted,
