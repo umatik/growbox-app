@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import DisplayControl from "@/components/controlers/DisplayControl";
@@ -36,11 +37,7 @@ export default function ManualMode() {
         iconColor={COLORS.blue}
       />
 
-      <RangeControl
-        label="Dimmer day level"
-        value={dayLevel}
-        onChange={() => {}}
-      />
+      <RangeControl label="Day fan" value={dayLevel} onChange={setFanLevel} />
 
       <DisplayControl />
     </View>

@@ -4,6 +4,13 @@ export interface FertilizerDose {
   color: string;
 }
 
+// Manual (vegetative) feeding = BioBizz Week 2, per 1 L of water
+export const VEG_NUTRIENTS: FertilizerDose[] = [
+  { name: "BIO·GROW", dosage: 2, color: "#00E95A" },
+  { name: "ACTI·VERA", dosage: 2, color: "#B18CFF" },
+  { name: "BIO·HEAVEN", dosage: 2, color: "#78BFFF" },
+];
+
 export const FERTILIZER_SCHEDULE: Record<number, FertilizerDose[]> = {
   // Our Week 1 = BioBizz Week 3
   1: [

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import FloweringStart from "@/components/FloweringStart";
 import RangeControl from "@/components/controlers/RangeControl";
@@ -26,11 +27,7 @@ export default function AutoMode() {
 
       <FloweringStart />
 
-      <RangeControl
-        label="Fan speed"
-        value={fanSpeed}
-        onChange={setFanLevel}
-      />
+      <RangeControl label="Fan speed" value={fanSpeed} onChange={setFanLevel} />
 
       <SwitchControl
         title="Night fan"

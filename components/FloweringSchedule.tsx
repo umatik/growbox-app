@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useFloweringProgress } from "@/hooks/useFloweringProgress";
 

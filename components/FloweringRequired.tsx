@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import Text from "@/components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
@@ -11,7 +12,7 @@ export default function FloweringRequired() {
   const startDate = useBoxStore((state) => state.flowering.startDate);
   const setFlowering = useBoxStore((state) => state.setFlowering);
   const setMode = useBoxStore((state) => state.setMode);
-  const { toggleMode, setFloweringStartDate } = useBoxControllerContext();
+  const { setFloweringStartDate } = useBoxControllerContext();
 
   const handleStart = async () => {
     const date = new Date().toISOString().slice(0, 10);
@@ -27,38 +28,9 @@ export default function FloweringRequired() {
     });
   };
 
-  const handleEnableAuto = async () => {
-    if (mode === "AUTO") {
-      return;
-    }
-
-    await toggleMode();
-  };
-
+  // flowering is Auto-only; Manual home has no card for it
   if (mode !== "AUTO") {
-    return (
-      <View style={styles.infoCard}>
-        <View style={styles.iconCircle}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.infoIcon}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Text style={styles.infoTitle}>Auto mode required</Text>
-
-        <Text style={styles.infoText}>
-          Flowering schedule is available only in Auto mode.
-        </Text>
-
-        <Pressable style={styles.startButton} onPress={handleEnableAuto}>
-          <Ionicons name="leaf-outline" size={23} color={COLORS.surfaceLight} />
-
-          <Text style={styles.startButtonText}>Turn on Auto mode</Text>
-        </Pressable>
-      </View>
-    );
+    return null;
   }
 
   if (!startDate) {
@@ -106,8 +78,8 @@ const styles = StyleSheet.create({
   },
 
   iconCircle: {
-    width: 220,
-    height: 220,
+    width: 140,
+    height: 140,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "@/components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
@@ -21,9 +22,11 @@ export default function AppShell({
   const mode = useBoxStore((state) => state.mode);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+          {title}
+        </Text>
 
         <View style={styles.modeStatus}>
           <Text style={styles.modeLabel}>MODE</Text>
@@ -46,7 +49,14 @@ export default function AppShell({
         )}
       </View>
 
-      {children}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        alwaysBounceVertical={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -57,7 +67,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
+  // lets decorative glow from the content spill behind the header
+  scroll: {
+    flex: 1,
+    overflow: "visible",
+  },
+
+  // flexGrow keeps flex: 1 screens filling the space when content is short
+  scrollContent: {
+    flexGrow: 1,
+  },
+
   header: {
+    zIndex: 1,
     height: 64,
     paddingHorizontal: 20,
     flexDirection: "row",
@@ -65,6 +87,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    flexShrink: 1,
     color: COLORS.text,
     fontSize: 25,
     fontWeight: "700",

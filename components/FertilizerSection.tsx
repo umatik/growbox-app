@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Text from "@/components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { FERTILIZER_SCHEDULE } from "@/data/fertilizerSchedule";
@@ -66,11 +67,14 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 4,
   },
 
   title: {
+    flexShrink: 1,
     color: COLORS.text,
     fontSize: 17,
     lineHeight: 24,
@@ -84,7 +88,7 @@ const styles = StyleSheet.create({
   },
 
   list: {
-    marginTop: 18,
+    marginTop: 8,
   },
 
   waterOnly: {
@@ -109,7 +113,7 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    minHeight: 48,
+    minHeight: 38,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -122,12 +126,14 @@ const styles = StyleSheet.create({
   },
 
   fertilizerName: {
-    fontSize: 16,
+    flexShrink: 1,
+    marginRight: 12,
+    fontSize: 15,
     fontWeight: "700",
   },
 
   dosage: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
   },
 });

@@ -25,6 +25,7 @@
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.5",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1",
     "zustand": "^5.0.15"
@@ -41,7 +42,9 @@
     "android": "expo run:android",
     "ios": "expo start --dev-client --tunnel",
     "web": "expo start --web",
-    "sim": "expo start --ios"
+    "sim": "expo start --ios",
+    "sim:mock": "EXPO_PUBLIC_OFFLINE_MODE=true expo start --ios -c",
+    "sim:esp": "EXPO_PUBLIC_OFFLINE_MODE=false expo start --ios -c"
   },
   "private": true
 }

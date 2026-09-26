@@ -1,4 +1,5 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
+import Text from "@/components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 
@@ -7,10 +8,7 @@ interface ModeSelectorProps {
   onChange?: (mode: "AUTO" | "MANUAL") => void;
 }
 
-export default function ModeSelector({
-  mode,
-  onChange,
-}: ModeSelectorProps) {
+export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity

@@ -7,4 +7,5 @@ export type {
   DeviceState,
   FloweringState,
   SchedulerState,
+  FeedingState,
 } from "./boxStore";

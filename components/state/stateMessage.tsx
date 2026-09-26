@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import Text from "@/components/AppText";
 
 const StateMessage = ({ children }: { children: React.ReactNode }) => (
   <View style={styles.container}>

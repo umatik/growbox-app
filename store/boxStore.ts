@@ -29,6 +29,11 @@ export interface FloweringState {
   progress: number;
 }
 
+export interface FeedingState {
+  lastFedAt: string | null;
+  count: number;
+}
+
 export interface SchedulerState {
   on: string;
   off: string;
@@ -43,6 +48,7 @@ interface BoxStore {
   auto: AutoState;
   flowering: FloweringState;
   scheduler: SchedulerState;
+  feeding: FeedingState;
 
   setMode: (mode: BoxMode) => void;
   setLastConnectedMode: (mode: BoxMode) => void;
@@ -61,6 +67,7 @@ interface BoxStore {
 
   setFlowering: (flowering: Partial<FloweringState>) => void;
   setScheduler: (scheduler: Partial<SchedulerState>) => void;
+  setFeeding: (feeding: Partial<FeedingState>) => void;
 
   reset: () => void;
 }
@@ -100,6 +107,11 @@ const initialState = {
   scheduler: {
     on: "18:00",
     off: "06:00",
+  },
+
+  feeding: {
+    lastFedAt: null,
+    count: 0,
   },
 };
 
@@ -198,6 +210,14 @@ export const useBoxStore = create<BoxStore>((set) => ({
       scheduler: {
         ...current.scheduler,
         ...scheduler,
+      },
+    })),
+
+  setFeeding: (feeding) =>
+    set((current) => ({
+      feeding: {
+        ...current.feeding,
+        ...feeding,
       },
     })),
 

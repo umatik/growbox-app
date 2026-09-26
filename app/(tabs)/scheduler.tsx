@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import Text from "@/components/AppText";
+import { Ionicons } from "@expo/vector-icons";
 import AppShell from "@/components/AppShell";
+import LogoWatermark from "@/components/LogoWatermark";
+import Sensor from "@/components/Sensor";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
@@ -95,20 +92,30 @@ export default function SchedulerScreen() {
 
   return (
     <AppShell title="Scheduler">
+      <Sensor />
+
       <View style={styles.container}>
         {mode !== "AUTO" ? (
-          <View style={styles.infoCard}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.icon}>i</Text>
+          <>
+            <LogoWatermark />
+
+            <View style={[styles.infoCard, styles.infoCardBottom]}>
+              <View style={styles.iconCircle}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={22}
+                  color={COLORS.blue}
+                />
+              </View>
+
+              <Text style={styles.infoTitle}>Auto mode required</Text>
+
+              <Text style={styles.infoText}>
+                The scheduler is available only when the system is running in
+                Auto mode.
+              </Text>
             </View>
-
-            <Text style={styles.infoTitle}>Auto mode required</Text>
-
-            <Text style={styles.infoText}>
-              The scheduler is available only when the system is running in Auto
-              mode.
-            </Text>
-          </View>
+          </>
         ) : (
           <View style={styles.card}>
             <View style={styles.header}>
@@ -165,6 +172,7 @@ export default function SchedulerScreen() {
                   placeholder="HHMM"
                   placeholderTextColor={COLORS.textMuted}
                   style={styles.input}
+                  maxFontSizeMultiplier={1.3}
                   returnKeyType="done"
                   onSubmitEditing={saveTime}
                 />
@@ -202,6 +210,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 14,
+    paddingBottom: 14,
   },
 
   infoCard: {
@@ -213,6 +222,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  // same gap as the logo's marginTop, keeps the logo centred between header and card
+  infoCardBottom: {
+    marginTop: 14,
+  },
+
   iconCircle: {
     width: 44,
     height: 44,
@@ -221,12 +235,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
-  },
-
-  icon: {
-    color: COLORS.blue,
-    fontSize: 22,
-    fontWeight: "700",
   },
 
   infoTitle: {

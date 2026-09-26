@@ -1,20 +1,25 @@
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Text from "@/components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 
 import AppShell from "@/components/AppShell";
 import Sensor from "@/components/Sensor";
+import FanSpeedCard from "@/components/FanSpeedCard";
+import FeedingCard from "@/components/FeedingCard";
+import VegNutrients from "@/components/VegNutrients";
+import EnvironmentChart from "@/components/EnvironmentChart";
 import FloweringRequired from "@/components/FloweringRequired";
 import { useBoxStore } from "@/store";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { COLORS } from "@/constants/Colors";
 
 export default function HomeScreen() {
+  const mode = useBoxStore((state) => state.mode);
   const lastConnectedMode = useBoxStore((state) => state.lastConnectedMode);
 
   const {
@@ -88,7 +93,19 @@ export default function HomeScreen() {
       {!initialLoading && (!error || connectionDismissed) && (
         <View style={styles.content}>
           <Sensor />
-          <FloweringRequired />
+          {mode === "MANUAL" ? (
+            <>
+              <EnvironmentChart />
+              <FanSpeedCard />
+              <VegNutrients />
+              <FeedingCard />
+            </>
+          ) : (
+            <>
+              <FeedingCard />
+              <FloweringRequired />
+            </>
+          )}
         </View>
       )}
     </AppShell>
@@ -96,8 +113,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // grows to the screen height so the logo can push the cards to the bottom
   content: {
-    paddingBottom: 20,
+    flexGrow: 1,
+    paddingBottom: 14,
   },
 
   connectionContainer: {

@@ -2,9 +2,9 @@ import {
   LayoutChangeEvent,
   PanResponder,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import Text from "@/components/AppText";
 import { useEffect, useMemo, useState } from "react";
 import { COLORS } from "@/constants/Colors";
 
@@ -75,7 +75,9 @@ export default function RangeControl({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.label} numberOfLines={1}>
+          {label}
+        </Text>
 
         <Text style={styles.value}>
           {localValue}
@@ -142,6 +144,8 @@ const styles = StyleSheet.create({
   },
 
   label: {
+    flexShrink: 1,
+    marginRight: 12,
     color: COLORS.text,
     fontSize: 15,
     fontWeight: "600",

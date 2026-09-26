@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import useEsp from "@box-controller/shared/hooks/useEsp";
+import useMockEsp from "@/mocks/useMockEsp";
 import { EspResponse } from "@box-controller/shared/interfaces/esp.interface";
 import { useBoxStore } from "@/store";
 
@@ -47,6 +48,7 @@ export function BoxControllerProvider({
   const setNightFanEnabled = useBoxStore((state) => state.setNightFanEnabled);
 
   const setFlowering = useBoxStore((state) => state.setFlowering);
+  const setFeeding = useBoxStore((state) => state.setFeeding);
 
   const handleResponse = useCallback(
     (response: EspResponse) => {
@@ -73,6 +75,10 @@ export function BoxControllerProvider({
       setFlowering({
         startDate: response.config.auto.floweringStartDate,
       });
+
+      if (response.config.feeding) {
+        setFeeding(response.config.feeding);
+      }
     },
     [
       setLastConnectedMode,
@@ -85,14 +91,20 @@ export function BoxControllerProvider({
       setDayLevel,
       setNightFanEnabled,
       setFlowering,
+      setFeeding,
     ],
   );
 
-  const controller = useEsp({
+  const realController = useEsp({
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
     apiToken: process.env.EXPO_PUBLIC_API_TOKEN ?? "",
     onResponse: handleResponse,
   });
+
+  const mockController = useMockEsp(handleResponse);
+
+  const offlineMode = process.env.EXPO_PUBLIC_OFFLINE_MODE === "true";
+  const controller = offlineMode ? mockController : realController;
 
   useEffect(() => {
     const loadInitialConfig = async () => {
