@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useFloweringProgress } from "@/hooks/useFloweringProgress";
+import { useFeedingStatus } from "@/hooks/useFeedingStatus";
 
 interface FloweringScheduleProps {
   totalWeeks?: number;
@@ -11,6 +12,14 @@ export default function FloweringSchedule({
   totalWeeks = 10,
 }: FloweringScheduleProps) {
   const { currentWeek, progress } = useFloweringProgress();
+  // late watering turns the week progress yellow, a missed one red
+  const { status, daysSince } = useFeedingStatus();
+  const warning =
+    status === "overdue"
+      ? { bar: styles.overdue, text: styles.overdueText }
+      : status === "late"
+        ? { bar: styles.late, text: styles.lateText }
+        : null;
 
   return (
     <View style={styles.container}>
@@ -60,12 +69,18 @@ export default function FloweringSchedule({
       </View>
 
       <View style={styles.progressHeader}>
-        <Text style={styles.progressLabel}>Week {currentWeek} progress</Text>
-        <Text style={styles.progressPercent}>{progress}%</Text>
+        <Text style={[styles.progressLabel, warning?.text]} numberOfLines={1}>
+          {warning
+            ? `Not watered for ${daysSince} days`
+            : `Week ${currentWeek} progress`}
+        </Text>
+        <Text style={[styles.progressPercent, warning?.text]}>{progress}%</Text>
       </View>
 
       <View style={styles.track}>
-        <View style={[styles.progress, { width: `${progress}%` }]} />
+        <View
+          style={[styles.progress, warning?.bar, { width: `${progress}%` }]}
+        />
       </View>
     </View>
   );
@@ -75,7 +90,8 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -86,19 +102,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  title: { color: COLORS.text, fontSize: 17, fontWeight: "600" },
-  week: { color: COLORS.cyan, fontSize: 14, fontWeight: "600" },
+  title: { color: COLORS.text, fontSize: 15, fontWeight: "600" },
+  week: { color: COLORS.cyan, fontSize: 13, fontWeight: "600" },
   weekStrong: { fontWeight: "700" },
   weeks: {
-    marginTop: 20,
+    marginTop: 8,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   weekItem: { alignItems: "center" },
   circle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: "center",
@@ -115,12 +131,12 @@ const styles = StyleSheet.create({
   flushWeekLabel: { color: "#91C6CC" },
   harvestWeekLabel: { color: "#B3DFAE" },
   progressHeader: {
-    marginTop: 18,
+    marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  progressLabel: { color: COLORS.textMuted, fontSize: 13 },
-  progressPercent: { color: COLORS.green, fontSize: 13, fontWeight: "700" },
+  progressLabel: { flexShrink: 1, color: COLORS.textMuted, fontSize: 11 },
+  progressPercent: { color: COLORS.green, fontSize: 11, fontWeight: "700" },
   track: {
     height: 6,
     marginTop: 8,
@@ -128,6 +144,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     overflow: "hidden",
   },
+  late: { backgroundColor: COLORS.yellow },
+  lateText: { color: COLORS.yellow },
+  overdue: { backgroundColor: COLORS.red },
+  overdueText: { color: COLORS.red },
   progress: {
     height: "100%",
     borderRadius: 3,

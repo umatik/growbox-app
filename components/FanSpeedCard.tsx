@@ -16,12 +16,12 @@ import { useCompactLayout } from "@/hooks/useCompactLayout";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const GAUGE_SIZE = 72;
-const RADIUS = 32;
-const STROKE_WIDTH = 5;
+const GAUGE_SIZE = 50;
+const RADIUS = 22;
+const STROKE_WIDTH = 4;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const FAN_SIZE = 34;
+const FAN_SIZE = 24;
 const FAN_OFF_COLOR = "#2a4a3e";
 const PILL_BACKGROUND = "rgba(0, 233, 90, 0.12)";
 
@@ -37,8 +37,10 @@ function getLevelLabel(pct: number) {
   return "MAX";
 }
 
+// seconds per turn: 2.4 s near 0 %, 1.08 s at 100 % (the old 60 % speed,
+// anything faster looked frantic)
 function getRotationSeconds(pct: number) {
-  return 2.4 - 2.2 * (pct / 100);
+  return 2.4 - 1.32 * (pct / 100);
 }
 
 export default function FanSpeedCard() {
@@ -164,7 +166,7 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 14,
-    paddingVertical: 12,
+    paddingVertical: 6,
     paddingHorizontal: 18,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
@@ -221,18 +223,17 @@ const styles = StyleSheet.create({
   },
   value: {
     color: COLORS.text,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "600",
-    marginTop: 2,
   },
   unit: {
     color: COLORS.textMuted,
-    fontSize: 15,
+    fontSize: 13,
   },
   segments: {
     flexDirection: "row",
     gap: 4,
-    marginTop: 6,
+    marginTop: 4,
   },
   segment: {
     flex: 1,

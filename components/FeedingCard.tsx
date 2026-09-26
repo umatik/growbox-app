@@ -5,8 +5,12 @@ import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
+import { useFeedingStatus } from "@/hooks/useFeedingStatus";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+// the ESP firmware has no POST /feeding yet, so the button does nothing
+// until it does
+const FEEDING_ENABLED = false;
 
 function getLastFedLabel(lastFedAt: string | null) {
   if (!lastFedAt) return "Never";
@@ -23,12 +27,23 @@ function getLastFedLabel(lastFedAt: string | null) {
 export default function FeedingCard() {
   const lastFedAt = useBoxStore((state) => state.feeding.lastFedAt);
   const count = useBoxStore((state) => state.feeding.count);
+  const mode = useBoxStore((state) => state.mode);
+  const { status } = useFeedingStatus();
+
+  // Manual has no week progress bar, so the card itself shows a late (yellow)
+  // or missed (red) watering; in Auto the flowering progress bar does
+  const warningColor =
+    mode !== "MANUAL" || status === "ok"
+      ? null
+      : status === "overdue"
+        ? COLORS.red
+        : COLORS.yellow;
   const { logFeeding } = useBoxControllerContext();
 
   const [saving, setSaving] = useState(false);
 
   const handleFed = async () => {
-    if (saving) return;
+    if (!FEEDING_ENABLED || saving) return;
 
     try {
       setSaving(true);
@@ -41,15 +56,24 @@ export default function FeedingCard() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, warningColor && { borderColor: warningColor }]}
+    >
       <View style={styles.iconBox}>
-        <Ionicons name="water-outline" size={26} color={COLORS.blue} />
+        <Ionicons
+          name="water-outline"
+          size={26}
+          color={warningColor ?? COLORS.blue}
+        />
       </View>
 
       <View style={styles.info}>
         <Text style={styles.label}>Last fed</Text>
 
-        <Text style={styles.value} numberOfLines={1}>
+        <Text
+          style={[styles.value, warningColor && { color: warningColor }]}
+          numberOfLines={1}
+        >
           {getLastFedLabel(lastFedAt)}
           <Text style={styles.count}>
             {" "}

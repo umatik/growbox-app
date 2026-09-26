@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
@@ -10,114 +10,213 @@ import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 import { EnvironmentRow } from "@box-controller/shared/interfaces/esp.interface";
 import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
-import { useEnvironmentHistory } from "@/hooks/useEnvironmentHistory";
+import { useBoxStore } from "@/store";
+import { PhaseTargets, VEG_TARGETS } from "@/data/growTargets";
+import {
+  parseEspDate,
+  useEnvironmentHistory,
+} from "@/hooks/useEnvironmentHistory";
 
-const LABEL_WIDTH = 92;
-const PLOT_PADDING_Y = 6;
-const NIGHT_FILL = "rgba(255, 255, 255, 0.035)";
+// The middle line is 0 = the ideal of the current light phase. Readings are
+// drawn as their deviation from it, each metric on its own scale, and the
+// blocks mark the optimal range (ideal ± half its width) of each metric.
+const TEMPERATURE_RANGE = 5; // plot spans ±5 °C around the ideal
+const HUMIDITY_RANGE = 10; // plot spans ±10 % RH around the ideal
+
+const TEMPERATURE_COLOR = COLORS.blue;
+const HUMIDITY_COLOR = "#FFB547";
+const FEED_COLOR = COLORS.green;
+const FEED_BAR_WIDTH = 4;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+const HOUR_MS = 60 * 60 * 1000;
+// a press shorter and stiller than this is a tap (switches the range),
+// anything else is a scrub
+const TAP_MAX_MS = 250;
+const TAP_MAX_MOVE = 6;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Metric = "temperature" | "humidity";
+
+const RANGES: Record<Metric, number> = {
+  temperature: TEMPERATURE_RANGE,
+  humidity: HUMIDITY_RANGE,
+};
 
 interface Point {
   time: number;
   row: EnvironmentRow;
 }
 
-// "YYYY-MM-DD HH:MM:SS" in ESP local time, parsed by hand so no engine
-// guesses the timezone
-function parseEspDate(value: string) {
-  const [date, time] = value.split(" ");
-  const [year, month, day] = date.split("-").map(Number);
-  const [hours, minutes, seconds] = time.split(":").map(Number);
-
-  return new Date(year, month - 1, day, hours, minutes, seconds).getTime();
-}
-
-function formatTime(time: number) {
+function formatScrubTime(time: number) {
   const date = new Date(time);
 
-  return `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes(),
-  ).padStart(2, "0")}`;
+  return `${WEEKDAYS[date.getDay()]} ${String(date.getHours()).padStart(
+    2,
+    "0",
+  )}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-function formatValue(metric: Metric, value: number) {
-  return metric === "temperature"
-    ? `${value.toFixed(1)}°C`
-    : `${value.toFixed(0)}%`;
+function toMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  return hours * 60 + minutes;
 }
 
-interface PanelProps {
-  metric: Metric;
-  label: string;
-  color: string;
-  points: Point[];
-  start: number;
-  end: number;
-  activeIndex: number | null;
-  onScrub: (index: number | null) => void;
+// ideal values at a moment, from the light schedule (on/off wrap midnight)
+function targetsAt(time: number, on: string, off: string): PhaseTargets {
+  const date = new Date(time);
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  const onMinutes = toMinutes(on);
+  const offMinutes = toMinutes(off);
+  const lightsOn =
+    onMinutes < offMinutes
+      ? minutes >= onMinutes && minutes < offMinutes
+      : minutes >= onMinutes || minutes < offMinutes;
+
+  return lightsOn ? VEG_TARGETS.lightsOn : VEG_TARGETS.lightsOff;
 }
 
-function Panel({
-  metric,
-  label,
+function halfWidth(metric: Metric) {
+  const { min, max } = VEG_TARGETS.lightsOn[metric];
+
+  return (max - min) / 2;
+}
+
+function LegendItem({
   color,
-  points,
-  start,
-  end,
-  activeIndex,
-  onScrub,
-}: PanelProps) {
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  label,
+  value,
+  bar = false,
+}: {
+  color: string;
+  label: string;
+  value?: string;
+  bar?: boolean;
+}) {
+  return (
+    <View style={styles.legendItem}>
+      <View
+        style={[
+          bar ? styles.legendBar : styles.legendLine,
+          { backgroundColor: color },
+        ]}
+      />
+      <Text style={styles.legendLabel}>{label}</Text>
+      {value && <Text style={styles.legendValue}>{value}</Text>}
+    </View>
+  );
+}
 
-  const values = points.map((point) => point.row[metric]);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  // keep flat data from collapsing into a line glued to the edge
-  const span = Math.max(max - min, metric === "temperature" ? 1 : 4);
-  const mid = (min + max) / 2;
+export default function EnvironmentChart() {
+  const { rows, status } = useEnvironmentHistory();
+  const feedingHistory = useBoxStore((state) => state.feeding.history);
+  const lightsOn = useBoxStore((state) => state.scheduler.on);
+  const lightsOff = useBoxStore((state) => state.scheduler.off);
+
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [activeTime, setActiveTime] = useState<number | null>(null);
+  const [range, setRange] = useState<"week" | "day">("week");
+  const press = useRef({ x: 0, time: 0 });
+
+  const allPoints = useMemo(
+    () => rows.map((row) => ({ time: parseEspDate(row.datetime), row })),
+    [rows],
+  );
+
+  const newest = allPoints[allPoints.length - 1]?.time ?? 0;
+
+  // week: a full week back from the newest reading, so the day grid is
+  // complete even while history is short; day: today, midnight to midnight
+  const todayStart = new Date(newest).setHours(0, 0, 0, 0);
+  const start = range === "week" ? newest - WEEK_MS : todayStart;
+  const end = range === "week" ? newest : todayStart + DAY_MS;
+
+  const points = useMemo(
+    () => allPoints.filter((point) => point.time >= start && point.time <= end),
+    [allPoints, start, end],
+  );
 
   const x = (time: number) =>
     ((time - start) / Math.max(end - start, 1)) * size.width;
-  const y = (value: number) =>
-    PLOT_PADDING_Y +
-    (1 - (value - (mid - span / 2)) / span) *
-      (size.height - PLOT_PADDING_Y * 2);
 
-  const linePath = useMemo(() => {
-    if (!size.width) return "";
+  // deviation from the ideal at that moment, 0 in the middle of the plot
+  const y = (metric: Metric, value: number, time: number) => {
+    const deviation =
+      value - targetsAt(time, lightsOn, lightsOff)[metric].ideal;
+    const level =
+      size.height / 2 - (deviation / RANGES[metric]) * (size.height / 2);
 
-    return points
-      .map(
-        (point, index) =>
-          `${index === 0 ? "M" : "L"}${x(point.time).toFixed(1)} ${y(
-            point.row[metric],
-          ).toFixed(1)}`,
-      )
-      .join(" ");
-    // x/y only depend on size and the domain derived from points
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, size, metric]);
+    // keep extreme spikes inside the plot
+    return Math.min(Math.max(level, 1), size.height - 1);
+  };
 
-  // consecutive NIGHT rows become one shaded band
-  const nightBands = useMemo(() => {
-    const bands: { from: number; to: number }[] = [];
+  const chart = useMemo(() => {
+    if (!size.width) return null;
 
-    points.forEach((point, index) => {
-      if (point.row.day_night !== "NIGHT") return;
+    const toPath = (metric: Metric) =>
+      points
+        .map(
+          (point, index) =>
+            `${index === 0 ? "M" : "L"}${x(point.time).toFixed(1)} ${y(
+              metric,
+              point.row[metric],
+              point.time,
+            ).toFixed(1)}`,
+        )
+        .join(" ");
 
-      const next = points[index + 1]?.time ?? point.time;
-      const last = bands[bands.length - 1];
+    const blockHeight = (metric: Metric) =>
+      (halfWidth(metric) / RANGES[metric]) * size.height;
 
-      if (last && last.to === point.time) {
-        last.to = next;
-      } else {
-        bands.push({ from: point.time, to: next });
+    // grid lines: midnights for the week (label centred in the day column
+    // that follows), every 3 h for the day (labels on 06 / 12 / 18)
+    const grid: { time: number; label: string | null; labelAt: number }[] = [];
+
+    if (range === "week") {
+      const midnight = new Date(start);
+
+      midnight.setHours(24, 0, 0, 0);
+
+      while (midnight.getTime() < end) {
+        const time = midnight.getTime();
+
+        grid.push({
+          time,
+          // skip a label whose column would hang past the right edge
+          label: time + DAY_MS / 2 > end ? null : WEEKDAYS[midnight.getDay()],
+          labelAt: time + DAY_MS / 2,
+        });
+        midnight.setDate(midnight.getDate() + 1);
       }
-    });
+    } else {
+      for (let hour = 3; hour < 24; hour += 3) {
+        const time = start + hour * HOUR_MS;
 
-    return bands;
-  }, [points]);
+        grid.push({
+          time,
+          label: hour % 6 === 0 ? String(hour).padStart(2, "0") : null,
+          labelAt: time,
+        });
+      }
+    }
+
+    const feeds = feedingHistory
+      .map((date) => Date.parse(date))
+      .filter((time) => time >= start && time <= end);
+
+    return {
+      temperaturePath: toPath("temperature"),
+      humidityPath: toPath("humidity"),
+      temperatureBlock: blockHeight("temperature"),
+      humidityBlock: blockHeight("humidity"),
+      grid,
+      feeds,
+    };
+    // x/y only depend on size, range and the light schedule
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, size, feedingHistory, range, start, end, lightsOn, lightsOff]);
 
   const panResponder = useMemo(
     () =>
@@ -126,10 +225,24 @@ function Panel({
         onMoveShouldSetPanResponder: () => true,
         // don't let the ScrollView steal the scrub
         onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: (event) => scrubAt(event.nativeEvent.locationX),
+        onPanResponderGrant: (event) => {
+          press.current = { x: event.nativeEvent.locationX, time: Date.now() };
+          scrubAt(event.nativeEvent.locationX);
+        },
         onPanResponderMove: (event) => scrubAt(event.nativeEvent.locationX),
-        onPanResponderRelease: () => onScrub(null),
-        onPanResponderTerminate: () => onScrub(null),
+        onPanResponderRelease: (event) => {
+          const isTap =
+            Date.now() - press.current.time < TAP_MAX_MS &&
+            Math.abs(event.nativeEvent.locationX - press.current.x) <
+              TAP_MAX_MOVE;
+
+          if (isTap) {
+            setRange((current) => (current === "week" ? "day" : "week"));
+          }
+
+          setActiveTime(null);
+        },
+        onPanResponderTerminate: () => setActiveTime(null),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [points, size.width, start, end],
@@ -139,18 +252,16 @@ function Panel({
     if (!size.width || !points.length) return;
 
     const time = start + (locationX / size.width) * (end - start);
-    let nearest = 0;
+    let nearest = points[0];
 
-    points.forEach((point, index) => {
-      if (Math.abs(point.time - time) < Math.abs(points[nearest].time - time)) {
-        nearest = index;
+    points.forEach((point) => {
+      if (Math.abs(point.time - time) < Math.abs(nearest.time - time)) {
+        nearest = point;
       }
     });
 
-    onScrub(nearest);
+    setActiveTime(nearest.time);
   }
-
-  const shown = points[activeIndex ?? points.length - 1];
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -158,84 +269,7 @@ function Panel({
     setSize({ width, height });
   };
 
-  return (
-    <View style={styles.panel}>
-      <View style={styles.panelLabel}>
-        <Text style={styles.metricLabel} numberOfLines={1}>
-          {label}
-        </Text>
-        <Text style={styles.metricValue} numberOfLines={1}>
-          {formatValue(metric, shown.row[metric])}
-        </Text>
-        <Text style={styles.metricRange} numberOfLines={1}>
-          {formatValue(metric, min)} – {formatValue(metric, max)}
-        </Text>
-      </View>
-
-      <View
-        style={styles.plot}
-        onLayout={handleLayout}
-        {...panResponder.panHandlers}
-      >
-        {size.width > 0 && (
-          <Svg width={size.width} height={size.height} pointerEvents="none">
-            {nightBands.map((band) => (
-              <Rect
-                key={band.from}
-                x={x(band.from)}
-                y={0}
-                width={Math.max(x(band.to) - x(band.from), 1)}
-                height={size.height}
-                fill={NIGHT_FILL}
-              />
-            ))}
-
-            <Path
-              d={linePath}
-              stroke={color}
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              fill="none"
-            />
-
-            {activeIndex !== null && (
-              <>
-                <Line
-                  x1={x(shown.time)}
-                  x2={x(shown.time)}
-                  y1={0}
-                  y2={size.height}
-                  stroke={COLORS.textMuted}
-                  strokeWidth={1}
-                />
-                <Circle
-                  cx={x(shown.time)}
-                  cy={y(shown.row[metric])}
-                  r={4}
-                  fill={color}
-                  stroke={COLORS.surface}
-                  strokeWidth={2}
-                />
-              </>
-            )}
-          </Svg>
-        )}
-      </View>
-    </View>
-  );
-}
-
-export default function EnvironmentChart() {
-  const { rows, status } = useEnvironmentHistory();
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-  const points = useMemo(
-    () => rows.map((row) => ({ time: parseEspDate(row.datetime), row })),
-    [rows],
-  );
-
-  if (!points.length) {
+  if (!allPoints.length) {
     return (
       <View style={[styles.container, styles.centered]}>
         {status === "loading" ? (
@@ -251,45 +285,165 @@ export default function EnvironmentChart() {
     );
   }
 
-  const start = points[0].time;
-  const end = points[points.length - 1].time;
-  const hours = Math.max(1, Math.round((end - start) / 3600000));
+  const reading =
+    activeTime === null
+      ? undefined
+      : points.find((point) => point.time === activeTime);
 
   return (
     <View style={styles.container}>
-      <Panel
-        metric="temperature"
-        label="Temperature"
-        color={COLORS.green}
-        points={points}
-        start={start}
-        end={end}
-        activeIndex={activeIndex}
-        onScrub={setActiveIndex}
-      />
+      <View style={styles.header}>
+        <View style={styles.legend}>
+          <LegendItem
+            color={TEMPERATURE_COLOR}
+            label="Temp"
+            value={reading && `${reading.row.temperature.toFixed(1)}°C`}
+          />
+          <LegendItem
+            color={HUMIDITY_COLOR}
+            label="Humidity"
+            value={reading && `${reading.row.humidity.toFixed(0)}%`}
+          />
+          <LegendItem color={FEED_COLOR} label="Fed" bar />
+        </View>
 
-      <View style={styles.divider} />
+        <Text style={styles.range}>
+          {reading
+            ? formatScrubTime(reading.time)
+            : range === "week"
+              ? "7 days"
+              : "Today"}
+        </Text>
+      </View>
 
-      <Panel
-        metric="humidity"
-        label="Humidity"
-        color={COLORS.blue}
-        points={points}
-        start={start}
-        end={end}
-        activeIndex={activeIndex}
-        onScrub={setActiveIndex}
-      />
+      <View
+        style={styles.plot}
+        onLayout={handleLayout}
+        {...panResponder.panHandlers}
+      >
+        {chart && (
+          <Svg width={size.width} height={size.height} pointerEvents="none">
+            {/* optimal blocks around the 0 line: humidity wider, behind */}
+            <Rect
+              x={0}
+              y={(size.height - chart.humidityBlock) / 2}
+              width={size.width}
+              height={chart.humidityBlock}
+              fill={HUMIDITY_COLOR}
+              opacity={0.1}
+            />
+            <Rect
+              x={0}
+              y={(size.height - chart.temperatureBlock) / 2}
+              width={size.width}
+              height={chart.temperatureBlock}
+              fill={TEMPERATURE_COLOR}
+              opacity={0.16}
+            />
+
+            {chart.grid.map((line) => (
+              <Line
+                key={line.time}
+                x1={x(line.time)}
+                x2={x(line.time)}
+                y1={0}
+                y2={size.height}
+                stroke={COLORS.border}
+                strokeWidth={1}
+              />
+            ))}
+
+            {/* 0 = ideal */}
+            <Line
+              x1={0}
+              x2={size.width}
+              y1={size.height / 2}
+              y2={size.height / 2}
+              stroke={COLORS.border}
+              strokeWidth={1}
+            />
+            <Line
+              x1={0}
+              x2={size.width}
+              y1={size.height - 0.5}
+              y2={size.height - 0.5}
+              stroke={COLORS.border}
+              strokeWidth={1}
+            />
+
+            {chart.feeds.map((time) => (
+              <Rect
+                key={time}
+                x={x(time) - FEED_BAR_WIDTH / 2}
+                y={0}
+                width={FEED_BAR_WIDTH}
+                height={size.height}
+                rx={2}
+                fill={FEED_COLOR}
+                opacity={0.3}
+              />
+            ))}
+
+            <Path
+              d={chart.humidityPath}
+              stroke={HUMIDITY_COLOR}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <Path
+              d={chart.temperaturePath}
+              stroke={TEMPERATURE_COLOR}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              fill="none"
+            />
+
+            {reading && (
+              <>
+                <Line
+                  x1={x(reading.time)}
+                  x2={x(reading.time)}
+                  y1={0}
+                  y2={size.height}
+                  stroke={COLORS.textMuted}
+                  strokeWidth={1}
+                />
+                <Circle
+                  cx={x(reading.time)}
+                  cy={y("humidity", reading.row.humidity, reading.time)}
+                  r={4}
+                  fill={HUMIDITY_COLOR}
+                  stroke={COLORS.surface}
+                  strokeWidth={2}
+                />
+                <Circle
+                  cx={x(reading.time)}
+                  cy={y("temperature", reading.row.temperature, reading.time)}
+                  r={4}
+                  fill={TEMPERATURE_COLOR}
+                  stroke={COLORS.surface}
+                  strokeWidth={2}
+                />
+              </>
+            )}
+          </Svg>
+        )}
+      </View>
 
       <View style={styles.axis}>
-        <Text style={styles.axisText}>
-          {activeIndex === null
-            ? `Last ${hours} h`
-            : formatTime(points[activeIndex].time)}
-        </Text>
-        <Text style={styles.axisText}>
-          {formatTime(start)} – {formatTime(end)}
-        </Text>
+        {chart?.grid.map((line) =>
+          line.label ? (
+            <Text
+              key={line.time}
+              style={[styles.axisText, { left: x(line.labelAt) - 14 }]}
+            >
+              {line.label}
+            </Text>
+          ) : null,
+        )}
       </View>
     </View>
   );
@@ -299,10 +453,11 @@ const styles = StyleSheet.create({
   // grows into the free space between the sensor card and the controls
   container: {
     flexGrow: 1,
-    minHeight: 150,
+    minHeight: 120,
     marginHorizontal: 16,
     marginTop: 14,
-    paddingVertical: 10,
+    paddingTop: 10,
+    paddingBottom: 6,
     paddingHorizontal: 14,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
@@ -320,54 +475,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  panel: {
-    flex: 1,
+  header: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 6,
   },
 
-  panelLabel: {
-    width: LABEL_WIDTH,
-    justifyContent: "center",
+  legend: {
+    flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 
-  metricLabel: {
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
+  legendLine: {
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+  },
+
+  legendBar: {
+    width: 4,
+    height: 10,
+    borderRadius: 2,
+  },
+
+  legendLabel: {
     color: COLORS.textMuted,
     fontSize: 12,
   },
 
-  metricValue: {
-    marginTop: 1,
+  legendValue: {
     color: COLORS.text,
-    fontSize: 17,
+    fontSize: 12,
     fontWeight: "600",
   },
 
-  metricRange: {
-    marginTop: 1,
+  range: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
   },
 
   plot: {
     flex: 1,
   },
 
-  divider: {
-    height: 1,
-    marginVertical: 6,
-    backgroundColor: COLORS.border,
-  },
-
   axis: {
-    marginTop: 6,
-    marginLeft: LABEL_WIDTH,
-    flexDirection: "row",
-    justifyContent: "space-between",
+    height: 16,
+    marginTop: 2,
   },
 
+  // fixed width so each weekday label can be centred on its midnight tick
   axisText: {
+    position: "absolute",
+    width: 28,
+    textAlign: "center",
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 10,
   },
 });

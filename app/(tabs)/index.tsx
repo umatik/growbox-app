@@ -102,8 +102,9 @@ export default function HomeScreen() {
             </>
           ) : (
             <>
-              <FeedingCard />
+              <EnvironmentChart />
               <FloweringRequired />
+              <FeedingCard />
             </>
           )}
         </View>

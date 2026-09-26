@@ -10,7 +10,7 @@ export default function Sensor() {
   const humidity = useBoxStore((state) => state.sensor.humidity);
   const light = useBoxStore((state) => state.devices.light);
   const compact = useCompactLayout();
-  const iconSize = compact ? 30 : 40;
+  const iconSize = compact ? 27 : 36;
 
   return (
     <View style={styles.container}>
@@ -52,8 +52,8 @@ export default function Sensor() {
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -75,18 +75,18 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    height: 44,
+    height: 40,
     backgroundColor: COLORS.border,
     marginHorizontal: 12,
   },
   value: {
     color: COLORS.text,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
   },
   label: {
     color: COLORS.cyan,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
 });

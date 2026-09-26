@@ -32,6 +32,7 @@ export interface FloweringState {
 export interface FeedingState {
   lastFedAt: string | null;
   count: number;
+  history: string[];
 }
 
 export interface SchedulerState {
@@ -112,6 +113,7 @@ const initialState = {
   feeding: {
     lastFedAt: null,
     count: 0,
+    history: [],
   },
 };
 

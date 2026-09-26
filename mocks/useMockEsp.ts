@@ -4,14 +4,58 @@ import {
   EnvironmentRow,
   EspResponse,
 } from "@box-controller/shared/interfaces/esp.interface";
+import { VEG_TARGETS } from "@/data/growTargets";
 
 const MOCK_FLOWERING_START_DATE = "2026-09-23";
-const MOCK_LAST_FED_AT = new Date(Date.now() - 2 * 86400000).toISOString();
+const DAY_MS = 86400000;
+const HOUR_MS = 3600000;
+const MOCK_DAYS = 21;
+
+// deterministic 0..1 "random" per number, so every render sees the same data
+const hash = (value: number) => {
+  const x = Math.sin(value * 12.9898) * 43758.5453;
+
+  return x - Math.floor(x);
+};
+
+// scenario: "today is Thursday, last watering Tuesday" - the last feeding
+// was 2 days ago, the one before it 3 days ago (Mon + Tue), and before that
+// the usual feed, feed, break rhythm; each around 19:00
+const LAST_FED_DAYS_AGO = 2;
+
+const createFeedingTimes = () => {
+  const today = new Date().setHours(0, 0, 0, 0);
+  const times: number[] = [];
+
+  for (
+    let daysAgo = MOCK_DAYS - 1;
+    daysAgo >= LAST_FED_DAYS_AGO;
+    daysAgo -= 1
+  ) {
+    const dayStart = today - daysAgo * DAY_MS;
+    const dayNumber = Math.round(dayStart / DAY_MS);
+
+    // counting back from the last feeding: feed, feed, break, feed, feed...
+    if ((daysAgo - LAST_FED_DAYS_AGO) % 3 === 2) continue; // break day
+
+    const time =
+      dayStart + 19 * HOUR_MS + Math.round(hash(dayNumber) * 90) * 60000;
+
+    if (time < Date.now()) times.push(time);
+  }
+
+  return times;
+};
+
+const MOCK_FEED_TIMES = createFeedingTimes();
+const MOCK_FEEDING_HISTORY = MOCK_FEED_TIMES.map((time) =>
+  new Date(time).toISOString(),
+);
 
 const createInitialResponse = (): EspResponse =>
   ({
     status: {
-      mode: "AUTO",
+      mode: "MANUAL",
       state: "DAY",
     },
     sensor: {
@@ -33,7 +77,11 @@ const createInitialResponse = (): EspResponse =>
         floweringStartDate: MOCK_FLOWERING_START_DATE,
       },
       lightSchedule: [{ on: "18:00", off: "06:00" }],
-      feeding: { lastFedAt: MOCK_LAST_FED_AT, count: 5 },
+      feeding: {
+        lastFedAt: MOCK_FEEDING_HISTORY[MOCK_FEEDING_HISTORY.length - 1],
+        count: MOCK_FEEDING_HISTORY.length,
+        history: MOCK_FEEDING_HISTORY,
+      },
     },
   }) as EspResponse;
 
@@ -46,31 +94,93 @@ const formatEspDate = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
   `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
-// lights on 18:00-06:00: warmer and drier while they're on
+// Readings are generated as a deviation from the veg ideal, in units of the
+// optimal range's half-width (0 = ideal, ±1 = edge of the optimal block):
+// - ~70 % of days are calm, within ±0.3
+// - the other days wobble more, still mostly inside the block
+// - after some waterings humidity spikes well above the block
+// - once, ~2 days ago, it gets 0–30 % too warm for a few hours
+
+// calm days stay within ±0.3; restless days (about 30 %) swing ~2.3× more
+const baseDeviation = (time: number, seed: number) => {
+  const dayNumber = Math.floor(time / DAY_MS);
+  const restless = hash(dayNumber * 7 + seed) < 0.3;
+  const wave =
+    Math.sin(time / (5 * HOUR_MS) + seed) * 0.17 +
+    Math.sin(time / (1.7 * HOUR_MS) + seed * 2) * 0.07 +
+    (hash(time / MOCK_LOG_INTERVAL_MS + seed) - 0.5) * 0.1;
+
+  return restless ? wave * 2.3 : wave;
+};
+
+// sharp rise within ~15 min after watering, then drying out over a few hours
+const humiditySpike = (time: number) =>
+  MOCK_FEED_TIMES.reduce((sum, fedAt) => {
+    const since = time - fedAt;
+
+    // only some waterings end in a spike, each of its own size
+    if (since < 0 || since > 10 * HOUR_MS || hash(fedAt) < 0.4) return sum;
+
+    const peak = 1.5 + hash(fedAt + 1) * 0.5;
+
+    return (
+      sum +
+      peak *
+        (1 - Math.exp(-since / (10 * 60000))) *
+        Math.exp(-since / (1.8 * HOUR_MS))
+    );
+  }, 0);
+
+// the single "too warm" afternoon: peaks just past the block edge (+1.25)
+const HEAT_EPISODE_AT = new Date(Date.now() - 2 * DAY_MS).setHours(15, 0, 0, 0);
+
+const heatEpisode = (time: number) =>
+  1.2 * Math.exp(-(((time - HEAT_EPISODE_AT) / (2 * HOUR_MS)) ** 2));
+
 const createMockRow = (time: number): EnvironmentRow => {
   const date = new Date(time);
   const hour = date.getHours() + date.getMinutes() / 60;
+  // lights on 18:00-06:00, like the mock light schedule
   const isDay = hour >= 18 || hour < 6;
-  const hoursIntoPhase = (hour - (isDay ? 18 : 6) + 24) % 24;
-  const warmUp = Math.min(1, hoursIntoPhase / 2);
-  const heat = isDay ? warmUp : 1 - warmUp;
-  const noise = Math.sin(time / 1800000) * 0.25;
+  const targets = isDay ? VEG_TARGETS.lightsOn : VEG_TARGETS.lightsOff;
+
+  const halfWidth = (range: { min: number; max: number }) =>
+    (range.max - range.min) / 2;
+
+  const temperatureDeviation = baseDeviation(time, 1) + heatEpisode(time);
+  const humidityDeviation = baseDeviation(time, 2) + humiditySpike(time);
 
   return {
     datetime: formatEspDate(date),
     day_night: isDay ? "DAY" : "NIGHT",
-    temperature: Math.round((20.8 + heat * 3.4 + noise) * 10) / 10,
-    humidity: Math.round((56 - heat * 6 + noise * 4) * 10) / 10,
+    temperature:
+      Math.round(
+        (targets.temperature.ideal +
+          temperatureDeviation * halfWidth(targets.temperature)) *
+          10,
+      ) / 10,
+    humidity:
+      Math.round(
+        (targets.humidity.ideal +
+          humidityDeviation * halfWidth(targets.humidity)) *
+          10,
+      ) / 10,
   };
 };
 
-const createMockEnvironment = (limit: number, before?: string) => {
+// the fake SD log covers the last 3 weeks, one row every 2 min
+const MOCK_LOG_ROWS = MOCK_DAYS * 24 * 30;
+
+const createMockEnvironment = (limit: number, before?: string, step = 1) => {
   const end =
     Math.floor(Date.now() / MOCK_LOG_INTERVAL_MS) * MOCK_LOG_INTERVAL_MS;
   const rows: EnvironmentRow[] = [];
 
-  for (let i = 499; i >= 0; i -= 1) {
-    rows.push(createMockRow(end - i * MOCK_LOG_INTERVAL_MS));
+  // every step-th row counted back from the newest, like the ESP would
+  for (let i = MOCK_LOG_ROWS - 1; i >= 0; i -= 1) {
+    if (i % step === 0) {
+      rows.push(createMockRow(end - i * MOCK_LOG_INTERVAL_MS));
+    }
   }
 
   const older = before ? rows.filter((row) => row.datetime < before) : rows;
@@ -189,18 +299,27 @@ export default function useMockEsp(
     async (date: string) => {
       update((response) => {
         const count = response.config.feeding?.count ?? 0;
+        const history = response.config.feeding?.history ?? [];
 
-        response.config.feeding = { lastFedAt: date, count: count + 1 };
+        response.config.feeding = {
+          lastFedAt: date,
+          count: count + 1,
+          history: [...history, date],
+        };
       });
     },
     [update],
   );
 
   const fetchEnvironment = useCallback(
-    async (limit: number, before?: string): Promise<EnvironmentResponse> => {
+    async (
+      limit: number,
+      before?: string,
+      step?: number,
+    ): Promise<EnvironmentResponse> => {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      return createMockEnvironment(limit, before);
+      return createMockEnvironment(limit, before, step);
     },
     [],
   );

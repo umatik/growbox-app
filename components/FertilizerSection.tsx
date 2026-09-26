@@ -58,7 +58,8 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -76,19 +77,19 @@ const styles = StyleSheet.create({
   title: {
     flexShrink: 1,
     color: COLORS.text,
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     fontWeight: "600",
   },
 
   week: {
     color: COLORS.cyan,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
 
   list: {
-    marginTop: 8,
+    marginTop: 2,
   },
 
   waterOnly: {
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    minHeight: 38,
+    minHeight: 26,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -128,12 +129,12 @@ const styles = StyleSheet.create({
   fertilizerName: {
     flexShrink: 1,
     marginRight: 12,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
   },
 
   dosage: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
 });

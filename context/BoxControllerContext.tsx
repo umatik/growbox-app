@@ -77,7 +77,11 @@ export function BoxControllerProvider({
       });
 
       if (response.config.feeding) {
-        setFeeding(response.config.feeding);
+        setFeeding({
+          lastFedAt: response.config.feeding.lastFedAt,
+          count: response.config.feeding.count,
+          history: response.config.feeding.history ?? [],
+        });
       }
     },
     [
