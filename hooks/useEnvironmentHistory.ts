@@ -1,18 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { EnvironmentRow } from "@box-controller/shared/interfaces/esp.interface";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
+import {
+  getNewestDatetime,
+  getRowsSince,
+  insertRows,
+} from "@/store/environmentDb";
 
-// the ESP logs every 2 min and returns max 500 rows per request (~7 s),
-// so a week is fetched as every 10th row: 500 points, one per 20 min
-const HISTORY_LIMIT = 500;
-const HISTORY_STEP = 10;
+// history lives in a local SQLite copy of the ESP log; the ESP is only asked
+// for rows newer than the newest stored one (max 500 per request)
+const PAGE_LIMIT = 500;
+const PAGE_PAUSE_MS = 1000;
+const SYNC_MS = 5 * 60 * 1000;
+
+// the chart shows a week, one point per 20 min
 const POINT_MS = 20 * 60 * 1000;
 const RANGE_MS = 7 * 24 * 60 * 60 * 1000;
-
-// afterwards only the newest raw rows are pulled and thinned to POINT_MS
-const REFRESH_LIMIT = 15;
-const REFRESH_MS = POINT_MS;
-const PAGE_PAUSE_MS = 1000;
 
 export type EnvironmentStatus = "loading" | "ok" | "offline" | "error";
 
@@ -26,124 +29,123 @@ export function parseEspDate(value: string) {
   return new Date(year, month - 1, day, hours, minutes, seconds).getTime();
 }
 
-function appendThinned(current: EnvironmentRow[], incoming: EnvironmentRow[]) {
-  const next = [...current];
+const pad = (value: number) => String(value).padStart(2, "0");
 
-  for (const row of incoming) {
-    const last = next[next.length - 1];
+export function formatEspDate(time: number) {
+  const date = new Date(time);
 
-    if (
-      !last ||
-      parseEspDate(row.datetime) - parseEspDate(last.datetime) >= POINT_MS
-    ) {
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
+}
+
+function thin(rows: EnvironmentRow[]) {
+  const next: EnvironmentRow[] = [];
+  let lastTime = -Infinity;
+
+  for (const row of rows) {
+    const time = parseEspDate(row.datetime);
+
+    if (time - lastTime >= POINT_MS) {
       next.push(row);
+      lastTime = time;
     }
   }
 
-  if (!next.length) return next;
-
-  const cutoff = parseEspDate(next[next.length - 1].datetime) - RANGE_MS;
-
-  return next.filter((row) => parseEspDate(row.datetime) >= cutoff);
+  return next;
 }
 
 export function useEnvironmentHistory() {
-  const { fetchEnvironment } = useBoxControllerContext();
+  const { fetchEnvironmentSince } = useBoxControllerContext();
 
   const [rows, setRows] = useState<EnvironmentRow[]>([]);
   const [status, setStatus] = useState<EnvironmentStatus>("loading");
-  const hasRows = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    let syncing = false;
 
-    const loadWeek = async () => {
-      let response = await fetchEnvironment(
-        HISTORY_LIMIT,
-        undefined,
-        HISTORY_STEP,
+    // the week before the newest stored reading
+    const publish = async () => {
+      const newest = await getNewestDatetime();
+
+      if (cancelled || !newest) return false;
+
+      const stored = await getRowsSince(
+        formatEspDate(parseEspDate(newest) - RANGE_MS),
       );
 
-      if (cancelled) return;
+      if (cancelled) return false;
 
-      if (response.status === "offline") {
-        setStatus("offline");
-        return;
-      }
+      setRows(thin(stored));
+      setStatus("ok");
 
-      let collected = response.data;
-
-      const publish = () => {
-        const next = appendThinned([], collected);
-
-        hasRows.current = next.length > 0;
-        setRows(next);
-        setStatus("ok");
-      };
-
-      publish();
-
-      if (!collected.length) return;
-
-      // firmware without `step` sends raw 2-min rows: page back through
-      // the log until a week is covered, pausing so control calls get through
-      const spacing =
-        collected.length > 1
-          ? parseEspDate(collected[1].datetime) -
-            parseEspDate(collected[0].datetime)
-          : POINT_MS;
-      const newest = parseEspDate(collected[collected.length - 1].datetime);
-
-      while (
-        spacing < POINT_MS / 2 &&
-        response.has_more &&
-        response.next_before &&
-        newest - parseEspDate(collected[0].datetime) < RANGE_MS
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, PAGE_PAUSE_MS));
-
-        if (cancelled) return;
-
-        response = await fetchEnvironment(HISTORY_LIMIT, response.next_before);
-
-        if (cancelled || response.status !== "ok") return;
-
-        collected = [...response.data, ...collected];
-        publish();
-      }
+      return true;
     };
 
-    const loadLatest = async () => {
-      const response = await fetchEnvironment(REFRESH_LIMIT);
+    const sync = async () => {
+      if (syncing) return;
 
-      if (cancelled || response.status !== "ok") return;
+      syncing = true;
 
-      setRows((current) => appendThinned(current, response.data));
-    };
+      let hasRows = false;
 
-    const load = async (full: boolean) => {
       try {
-        await (full ? loadWeek() : loadLatest());
-      } catch {
-        if (!cancelled) {
-          // keep showing what we already have
-          setStatus((current) => (current === "ok" ? current : "error"));
+        hasRows = await publish();
+
+        // an empty store starts a week back, not at the start of the SD log
+        let since =
+          (await getNewestDatetime()) ?? formatEspDate(Date.now() - RANGE_MS);
+
+        while (!cancelled) {
+          const response = await fetchEnvironmentSince(since, PAGE_LIMIT);
+
+          if (cancelled) return;
+
+          if (response.status === "offline") {
+            if (!hasRows) setStatus("offline");
+            return;
+          }
+
+          await insertRows(response.data);
+
+          if (response.data.length) {
+            hasRows = await publish();
+          } else if (!hasRows) {
+            // ESP works, nothing logged in the last week yet
+            setStatus("ok");
+          }
+
+          const next =
+            response.next_since ??
+            response.data[response.data.length - 1]?.datetime;
+
+          // firmware without `since` keeps sending the newest rows
+          if (!response.has_more || !next || next <= since) return;
+
+          since = next;
+
+          // leave room for control calls between pages
+          await new Promise((resolve) => setTimeout(resolve, PAGE_PAUSE_MS));
         }
+      } catch {
+        // keep showing what is stored
+        if (!cancelled && !hasRows) setStatus("error");
+      } finally {
+        syncing = false;
       }
     };
 
-    void load(true);
+    void sync();
 
-    const interval = setInterval(() => {
-      // until the first full load succeeds, keep asking for the whole week
-      void load(!hasRows.current);
-    }, REFRESH_MS);
+    const interval = setInterval(() => void sync(), SYNC_MS);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [fetchEnvironment]);
+  }, [fetchEnvironmentSince]);
 
   return { rows, status };
 }

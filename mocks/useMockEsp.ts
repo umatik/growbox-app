@@ -195,6 +195,30 @@ const createMockEnvironment = (limit: number, before?: string, step = 1) => {
   } satisfies EnvironmentResponse;
 };
 
+const createMockEnvironmentSince = (since: string, limit: number) => {
+  const end =
+    Math.floor(Date.now() / MOCK_LOG_INTERVAL_MS) * MOCK_LOG_INTERVAL_MS;
+  const rows: EnvironmentRow[] = [];
+
+  for (let i = MOCK_LOG_ROWS - 1; i >= 0; i -= 1) {
+    const row = createMockRow(end - i * MOCK_LOG_INTERVAL_MS);
+
+    if (row.datetime > since) rows.push(row);
+    if (rows.length > limit) break;
+  }
+
+  const page = rows.slice(0, limit);
+  const hasMore = rows.length > limit;
+
+  return {
+    status: "ok",
+    has_more: hasMore,
+    next_before: null,
+    next_since: hasMore ? page[page.length - 1].datetime : null,
+    data: page,
+  } satisfies EnvironmentResponse;
+};
+
 export default function useMockEsp(
   onResponse?: (response: EspResponse) => void,
 ) {
@@ -324,6 +348,15 @@ export default function useMockEsp(
     [],
   );
 
+  const fetchEnvironmentSince = useCallback(
+    async (since: string, limit: number): Promise<EnvironmentResponse> => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      return createMockEnvironmentSince(since, limit);
+    },
+    [],
+  );
+
   return {
     loading,
     error,
@@ -340,5 +373,6 @@ export default function useMockEsp(
     setFloweringStartDate,
     logFeeding,
     fetchEnvironment,
+    fetchEnvironmentSince,
   };
 }
