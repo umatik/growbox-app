@@ -8,8 +8,9 @@ import {
 } from "@/store/environmentDb";
 
 // history lives in a local SQLite copy of the ESP log; the ESP is only asked
-// for rows newer than the newest stored one (max 500 per request)
-const PAGE_LIMIT = 500;
+// for rows newer than the newest stored one. Small pages (~0.6 s each): the
+// ESP serves requests one at a time, so relay toggles wait behind a page
+const PAGE_LIMIT = 100;
 const PAGE_PAUSE_MS = 1000;
 const SYNC_MS = 5 * 60 * 1000;
 
