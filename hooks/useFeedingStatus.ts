@@ -37,6 +37,8 @@ export function feedingStatus(
   thresholds: FeedingThresholds,
   now = Date.now(),
 ): FeedingStatus {
+  // never fed at all counts as a missed watering
+  if (!history.length) return "overdue";
   if (history.length < 2) return "ok";
 
   const last = dayIndex(Date.parse(history[history.length - 1]));

@@ -46,6 +46,12 @@
             "enableSceneSupport": true
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableBackgroundRemoteNotifications": false
+        }
       ]
     ],
     "experiments": {

@@ -71,7 +71,9 @@ export default function FloweringSchedule({
       <View style={styles.progressHeader}>
         <Text style={[styles.progressLabel, warning?.text]} numberOfLines={1}>
           {warning
-            ? `Not watered for ${daysSince} days`
+            ? daysSince === null
+              ? "Never watered"
+              : `Not watered for ${daysSince} days`
             : `Week ${currentWeek} progress`}
         </Text>
         <Text style={[styles.progressPercent, warning?.text]}>{progress}%</Text>

@@ -14,6 +14,7 @@ import "react-native-reanimated";
 import "../global.css";
 
 import { BoxControllerProvider } from "@/context/BoxControllerContext";
+import { useWateringReminders } from "@/hooks/useWateringReminders";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { useBoxStore } from "@/store";
 import { COLORS } from "@/constants/Colors";
@@ -100,6 +101,8 @@ function ConnectionOverlay() {
 }
 
 function AppContent() {
+  useWateringReminders();
+
   return (
     <>
       <Stack>
