@@ -5,7 +5,12 @@ import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import FloweringSchedule from "@/components/FloweringSchedule";
 import FertilizerSection from "@/components/FertilizerSection";
+import EndOfPeriodCard from "@/components/EndOfPeriodCard";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
+import { useFloweringProgress } from "@/hooks/useFloweringProgress";
+
+// from this week on nothing is fed any more: the period ends
+const END_OF_PERIOD_WEEK = 9;
 
 export default function FloweringRequired() {
   const mode = useBoxStore((state) => state.mode);
@@ -13,6 +18,7 @@ export default function FloweringRequired() {
   const setFlowering = useBoxStore((state) => state.setFlowering);
   const setMode = useBoxStore((state) => state.setMode);
   const { setFloweringStartDate } = useBoxControllerContext();
+  const { currentWeek } = useFloweringProgress();
 
   const handleStart = async () => {
     const date = new Date().toISOString().slice(0, 10);
@@ -59,7 +65,11 @@ export default function FloweringRequired() {
   return (
     <>
       <FloweringSchedule />
-      <FertilizerSection />
+      {currentWeek >= END_OF_PERIOD_WEEK ? (
+        <EndOfPeriodCard />
+      ) : (
+        <FertilizerSection />
+      )}
     </>
   );
 }

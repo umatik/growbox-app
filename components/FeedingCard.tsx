@@ -63,6 +63,26 @@ export default function FeedingCard() {
     }
   };
 
+  // a missed watering turns the whole card into one big call to action
+  if (status === "overdue") {
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.feedNow, pressed && styles.pressed]}
+        onPress={handleFed}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator size="small" color={COLORS.text} />
+        ) : (
+          <>
+            <Ionicons name="water" size={24} color={COLORS.text} />
+            <Text style={styles.feedNowText}>Feed me now!</Text>
+          </>
+        )}
+      </Pressable>
+    );
+  }
+
   return (
     <View style={[styles.container, { borderColor }]}>
       <View style={styles.iconBox}>
@@ -159,6 +179,24 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.8,
+  },
+
+  feedNow: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    height: 66,
+    borderRadius: 16,
+    backgroundColor: COLORS.red,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
+  feedNowText: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: "700",
   },
 
   buttonText: {

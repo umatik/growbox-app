@@ -278,7 +278,9 @@ export default function EnvironmentChart() {
           <Text style={styles.emptyText}>
             {status === "offline"
               ? "SD card offline – no history"
-              : "History unavailable"}
+              : status === "ok"
+                ? "No readings yet"
+                : "History unavailable"}
           </Text>
         )}
       </View>

@@ -357,6 +357,10 @@ export default function useMockEsp(
     [],
   );
 
+  const eraseEnvironment = useCallback(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }, []);
+
   return {
     loading,
     error,
@@ -374,5 +378,6 @@ export default function useMockEsp(
     logFeeding,
     fetchEnvironment,
     fetchEnvironmentSince,
+    eraseEnvironment,
   };
 }

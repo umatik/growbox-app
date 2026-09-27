@@ -11,6 +11,17 @@ const DB_NAME =
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+// notified after clearRows(), so a mounted chart drops what it shows
+const clearListeners = new Set<() => void>();
+
+export function onRowsCleared(listener: () => void) {
+  clearListeners.add(listener);
+
+  return () => {
+    clearListeners.delete(listener);
+  };
+}
+
 function getDb() {
   if (!dbPromise) {
     dbPromise = (async () => {
@@ -82,4 +93,13 @@ export async function insertRows(rows: EnvironmentRow[]) {
       await statement.finalizeAsync();
     }
   });
+}
+
+// after the SD log is erased the local copy goes too
+export async function clearRows() {
+  const db = await getDb();
+
+  await db.runAsync("DELETE FROM environment");
+
+  clearListeners.forEach((listener) => listener());
 }

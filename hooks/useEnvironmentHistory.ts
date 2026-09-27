@@ -5,6 +5,7 @@ import {
   getNewestDatetime,
   getRowsSince,
   insertRows,
+  onRowsCleared,
 } from "@/store/environmentDb";
 
 // history lives in a local SQLite copy of the ESP log; the ESP is only asked
@@ -142,9 +143,17 @@ export function useEnvironmentHistory() {
 
     const interval = setInterval(() => void sync(), SYNC_MS);
 
+    const unsubscribe = onRowsCleared(() => {
+      if (cancelled) return;
+
+      setRows([]);
+      setStatus("ok");
+    });
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      unsubscribe();
     };
   }, [fetchEnvironmentSince]);
 
