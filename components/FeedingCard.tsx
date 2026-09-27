@@ -38,6 +38,14 @@ export default function FeedingCard() {
       : status === "overdue"
         ? COLORS.red
         : COLORS.yellow;
+  // the frame follows the watering status in both modes, like the
+  // flowering progress bar: green on time, yellow late, red missed
+  const borderColor =
+    status === "overdue"
+      ? COLORS.red
+      : status === "late"
+        ? COLORS.yellow
+        : COLORS.green;
   const { logFeeding } = useBoxControllerContext();
 
   const [saving, setSaving] = useState(false);
@@ -56,9 +64,7 @@ export default function FeedingCard() {
   };
 
   return (
-    <View
-      style={[styles.container, warningColor && { borderColor: warningColor }]}
-    >
+    <View style={[styles.container, { borderColor }]}>
       <View style={styles.iconBox}>
         <Ionicons
           name="water-outline"

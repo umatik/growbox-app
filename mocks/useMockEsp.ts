@@ -21,7 +21,7 @@ const hash = (value: number) => {
 // scenario: "today is Thursday, last watering Tuesday" - the last feeding
 // was 2 days ago, the one before it 3 days ago (Mon + Tue), and before that
 // the usual feed, feed, break rhythm; each around 19:00
-const LAST_FED_DAYS_AGO = 2;
+const LAST_FED_DAYS_AGO = 1;
 
 const createFeedingTimes = () => {
   const today = new Date().setHours(0, 0, 0, 0);
@@ -55,7 +55,7 @@ const MOCK_FEEDING_HISTORY = MOCK_FEED_TIMES.map((time) =>
 const createInitialResponse = (): EspResponse =>
   ({
     status: {
-      mode: "MANUAL",
+      mode: "AUTO",
       state: "DAY",
     },
     sensor: {
