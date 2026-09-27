@@ -88,7 +88,7 @@ const initialState = {
   devices: {
     light: false,
     fan: false,
-    display: true,
+    display: false,
     dimmerEnabled: false,
     dayLevel: 50,
     nightLevel: 30,
