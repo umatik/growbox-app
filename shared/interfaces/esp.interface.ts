@@ -7,6 +7,8 @@ export interface EspResponse {
 export interface EspStatus {
   mode: "AUTO" | "MANUAL";
   state: "DAY" | "NIGHT";
+  // actual dimmer level; differs from dimmer.day while fanAuto drives it
+  fanLevel?: number;
 }
 
 export interface EspSensor {
@@ -29,6 +31,16 @@ export interface EspConfig {
 
   // optional until every firmware build exposes it
   feeding?: FeedingConfig;
+  fanAuto?: FanAutoConfig;
+}
+
+// MANUAL (veg) mode: the ESP sets the fan level from the temperature
+export interface FanAutoConfig {
+  enabled: boolean;
+  minLevel: number;
+  maxLevel: number;
+  day: { min: number; max: number };
+  night: { min: number; max: number };
 }
 
 export interface DisplayConfig {

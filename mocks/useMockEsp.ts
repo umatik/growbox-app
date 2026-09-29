@@ -82,8 +82,32 @@ const createInitialResponse = (): EspResponse =>
         count: MOCK_FEEDING_HISTORY.length,
         history: MOCK_FEEDING_HISTORY,
       },
+      fanAuto: {
+        enabled: false,
+        minLevel: 20,
+        maxLevel: 100,
+        day: { min: 24, max: 26 },
+        night: { min: 20, max: 22 },
+      },
     },
   }) as EspResponse;
+
+// same curve as apply_fan_auto on the ESP: minLevel at the band's min,
+// maxLevel from 1 °C above its max, linear in 10 % steps between
+const mockFanAutoLevel = (response: EspResponse) => {
+  const cfg = response.config.fanAuto!;
+  const band = response.config.relayLight.state ? cfg.day : cfg.night;
+  const temperature = response.sensor.temperature ?? band.min;
+  const ratio = Math.min(
+    1,
+    Math.max(0, (temperature - band.min) / (band.max + 1 - band.min)),
+  );
+
+  return (
+    Math.round((cfg.minLevel + (cfg.maxLevel - cfg.minLevel) * ratio) / 10) *
+    10
+  );
+};
 
 const MOCK_LOG_INTERVAL_MS = 2 * 60 * 1000;
 
@@ -276,6 +300,17 @@ export default function useMockEsp(
     });
   }, [update]);
 
+  const toggleFanAuto = useCallback(async () => {
+    update((response) => {
+      const fanAuto = response.config.fanAuto!;
+
+      fanAuto.enabled = !fanAuto.enabled;
+      response.status.fanLevel = fanAuto.enabled
+        ? mockFanAutoLevel(response)
+        : response.config.dimmer.day.level;
+    });
+  }, [update]);
+
   const setFanLevel = useCallback(
     async (level: number) => {
       update((response) => {
@@ -371,6 +406,7 @@ export default function useMockEsp(
     toggleLight,
     toggleFan,
     toggleNightFan,
+    toggleFanAuto,
     setFanLevel,
     setNightFanLevel,
     setLightSchedule,

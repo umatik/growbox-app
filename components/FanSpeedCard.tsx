@@ -44,10 +44,10 @@ function getRotationSeconds(pct: number) {
 }
 
 export default function FanSpeedCard() {
-  const dayLevel = useBoxStore((state) => state.devices.dayLevel);
+  const fanLevel = useBoxStore((state) => state.devices.fanLevel);
   const compact = useCompactLayout();
 
-  const pct = Math.round(Math.min(100, Math.max(0, dayLevel)));
+  const pct = Math.round(Math.min(100, Math.max(0, fanLevel)));
   const isOff = pct === 0;
   const fanColor = isOff ? FAN_OFF_COLOR : COLORS.green;
 

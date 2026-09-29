@@ -94,6 +94,16 @@ export function createBoxService(apiUrl: string, apiToken: string) {
     }
   }
 
+  async function toggleFanAuto(): Promise<void> {
+    const response = await apiFetch("/fan/auto/toggle", {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  }
+
   async function setFanLevel(level: number): Promise<void> {
     const response = await apiFetch("/fan/level", {
       method: "POST",
@@ -217,6 +227,7 @@ export function createBoxService(apiUrl: string, apiToken: string) {
     toggleLight,
     toggleFan,
     toggleNightFan,
+    toggleFanAuto,
     setFanLevel,
     setNightFanLevel,
     setLightSchedule,

@@ -8,11 +8,13 @@ import SwitchControl from "@/components/controlers/SwitchControl";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
 
 export default function ManualMode() {
-  const { toggleLight, toggleFan, setFanLevel } = useBoxControllerContext();
+  const { toggleLight, toggleFan, setFanLevel, toggleFanAuto } =
+    useBoxControllerContext();
 
   const lightEnabled = useBoxStore((state) => state.devices.light);
   const fanEnabled = useBoxStore((state) => state.devices.fan);
   const dayLevel = useBoxStore((state) => state.devices.dayLevel);
+  const fanAuto = useBoxStore((state) => state.devices.fanAuto);
 
   return (
     <View style={styles.container}>
@@ -37,7 +39,21 @@ export default function ManualMode() {
         iconColor={COLORS.blue}
       />
 
-      <RangeControl label="Day fan" value={dayLevel} onChange={setFanLevel} />
+      <SwitchControl
+        title="Auto fan"
+        value={fanAuto}
+        onChange={toggleFanAuto}
+        icon="thermometer-outline"
+        iconColor={COLORS.blue}
+        statusText={fanAuto ? "BY TEMPERATURE" : "OFF"}
+      />
+
+      <RangeControl
+        label="Day fan"
+        value={dayLevel}
+        onChange={setFanLevel}
+        disabled={fanAuto}
+      />
 
       <DisplayControl />
     </View>

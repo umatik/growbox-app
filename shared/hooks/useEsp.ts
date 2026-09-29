@@ -57,6 +57,11 @@ const useEsp = ({ apiUrl, apiToken, onResponse }: BoxHookProps) => {
     await fetchConfig();
   }, [boxService, fetchConfig]);
 
+  const toggleFanAuto = useCallback(async () => {
+    await boxService.toggleFanAuto();
+    await fetchConfig();
+  }, [boxService, fetchConfig]);
+
   const setFanLevel = useCallback(
     async (level: number) => {
       await boxService.setFanLevel(level);
@@ -130,6 +135,7 @@ const useEsp = ({ apiUrl, apiToken, onResponse }: BoxHookProps) => {
     toggleLight,
     toggleFan,
     toggleNightFan,
+    toggleFanAuto,
     setFanLevel,
     setNightFanLevel,
     setLightSchedule,

@@ -15,8 +15,7 @@ const PAGE_LIMIT = 100;
 const PAGE_PAUSE_MS = 1000;
 const SYNC_MS = 5 * 60 * 1000;
 
-// the chart shows a week, one point per 20 min
-const POINT_MS = 20 * 60 * 1000;
+// the chart shows a week at most
 const RANGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type EnvironmentStatus = "loading" | "ok" | "offline" | "error";
@@ -42,14 +41,15 @@ export function formatEspDate(time: number) {
   );
 }
 
-function thin(rows: EnvironmentRow[]) {
+// at most one row per `pointMs`
+export function thin(rows: EnvironmentRow[], pointMs: number) {
   const next: EnvironmentRow[] = [];
   let lastTime = -Infinity;
 
   for (const row of rows) {
     const time = parseEspDate(row.datetime);
 
-    if (time - lastTime >= POINT_MS) {
+    if (time - lastTime >= pointMs) {
       next.push(row);
       lastTime = time;
     }
@@ -80,7 +80,7 @@ export function useEnvironmentHistory() {
 
       if (cancelled) return false;
 
-      setRows(thin(stored));
+      setRows(stored);
       setStatus("ok");
 
       return true;

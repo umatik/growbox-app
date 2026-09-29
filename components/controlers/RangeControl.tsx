@@ -16,6 +16,8 @@ interface RangeControlProps {
   max?: number;
   step?: number;
   unit?: string;
+  // greyed out and ignores touches
+  disabled?: boolean;
 }
 
 export default function RangeControl({
@@ -26,6 +28,7 @@ export default function RangeControl({
   max = 100,
   step = 1,
   unit = "%",
+  disabled = false,
 }: RangeControlProps) {
   const [width, setWidth] = useState(0);
   const [localValue, setLocalValue] = useState(value);
@@ -73,7 +76,7 @@ export default function RangeControl({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, disabled && styles.disabled]}>
       <View style={styles.header}>
         <Text style={styles.label} numberOfLines={1}>
           {label}
@@ -88,6 +91,7 @@ export default function RangeControl({
       <View
         style={styles.trackTouch}
         onLayout={handleLayout}
+        pointerEvents={disabled ? "none" : "auto"}
         {...panResponder.panHandlers}
       >
         <View style={styles.track}>
@@ -134,6 +138,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+
+  disabled: {
+    opacity: 0.4,
   },
 
   header: {

@@ -14,23 +14,36 @@ import { useBoxStore } from "@/store";
 import { PhaseTargets, VEG_TARGETS } from "@/data/growTargets";
 import {
   parseEspDate,
+  thin,
   useEnvironmentHistory,
 } from "@/hooks/useEnvironmentHistory";
 
-// The middle line is 0 = the ideal of the current light phase. Readings are
-// drawn as their deviation from it, each metric on its own scale, and the
-// blocks mark the optimal range (ideal ± half its width) of each metric.
-const TEMPERATURE_RANGE = 5; // plot spans ±5 °C around the ideal
-const HUMIDITY_RANGE = 10; // plot spans ±10 % RH around the ideal
+// Readings are drawn as plain values, each metric on its own scale (like the
+// desktop chart). The blocks behind them are the optimal range of each metric
+// for the light at that time - MANUAL (veg) keeps it on nonstop, AUTO follows
+// the light schedule - and the scale always takes them in.
 
-const TEMPERATURE_COLOR = COLORS.blue;
-const HUMIDITY_COLOR = "#FFB547";
+// a flat reading still gets this much span, so noise isn't blown up
+const MIN_SPAN: Record<"temperature" | "humidity", number> = {
+  temperature: 1,
+  humidity: 2,
+};
+// room above and below the extremes, as a share of the span
+const SCALE_PADDING = 0.1;
+
+const TEMPERATURE_COLOR = COLORS.yellow;
+const HUMIDITY_COLOR = COLORS.blue;
 const FEED_COLOR = COLORS.green;
 const FEED_BAR_WIDTH = 4;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 const HOUR_MS = 60 * 60 * 1000;
+// the week is thinned to one point per 20 min, the day to every 4th reading
+const WEEK_POINT_MS = 20 * 60 * 1000;
+const DAY_STEP = 4;
+// curve smoothing, same as the desktop chart (Chart.js tension)
+const TENSION = 0.3;
 // a press shorter and stiller than this is a tap (switches the range),
 // anything else is a scrub
 const TAP_MAX_MS = 250;
@@ -39,10 +52,13 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Metric = "temperature" | "humidity";
 
-const RANGES: Record<Metric, number> = {
-  temperature: TEMPERATURE_RANGE,
-  humidity: HUMIDITY_RANGE,
-};
+const PHASE_SAMPLE_MS = 5 * 60 * 1000;
+
+interface Phase {
+  from: number;
+  to: number;
+  targets: PhaseTargets;
+}
 
 interface Point {
   time: number;
@@ -58,30 +74,62 @@ function formatScrubTime(time: number) {
   )}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+// min / max of a metric over the visible points and the optimal ranges shown,
+// padded
+function scaleOf(points: Point[], phases: Phase[], metric: Metric) {
+  const values = points.map((point) => point.row[metric]);
+  const low = Math.min(
+    ...values,
+    ...phases.map((phase) => phase.targets[metric].min),
+  );
+  const high = Math.max(
+    ...values,
+    ...phases.map((phase) => phase.targets[metric].max),
+  );
+  const span = Math.max(high - low, MIN_SPAN[metric]);
+  const middle = (low + high) / 2;
+  const padded = span * (1 + 2 * SCALE_PADDING);
+
+  return { min: middle - padded / 2, max: middle + padded / 2 };
+}
+
 function toMinutes(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
 
   return hours * 60 + minutes;
 }
 
-// ideal values at a moment, from the light schedule (on/off wrap midnight)
-function targetsAt(time: number, on: string, off: string): PhaseTargets {
+// on/off wrap midnight
+function isLightOn(time: number, on: string, off: string) {
   const date = new Date(time);
   const minutes = date.getHours() * 60 + date.getMinutes();
   const onMinutes = toMinutes(on);
   const offMinutes = toMinutes(off);
-  const lightsOn =
-    onMinutes < offMinutes
-      ? minutes >= onMinutes && minutes < offMinutes
-      : minutes >= onMinutes || minutes < offMinutes;
 
-  return lightsOn ? VEG_TARGETS.lightsOn : VEG_TARGETS.lightsOff;
+  return onMinutes < offMinutes
+    ? minutes >= onMinutes && minutes < offMinutes
+    : minutes >= onMinutes || minutes < offMinutes;
 }
 
-function halfWidth(metric: Metric) {
-  const { min, max } = VEG_TARGETS.lightsOn[metric];
+// stretches of the same light phase between start and end
+function schedulePhases(start: number, end: number, on: string, off: string) {
+  const phases: Phase[] = [];
 
-  return (max - min) / 2;
+  for (let time = start; time < end; time += PHASE_SAMPLE_MS) {
+    const targets = isLightOn(time, on, off)
+      ? VEG_TARGETS.lightsOn
+      : VEG_TARGETS.lightsOff;
+    const last = phases[phases.length - 1];
+    const to = Math.min(time + PHASE_SAMPLE_MS, end);
+
+    if (last?.targets === targets) {
+      last.to = to;
+    } else {
+      phases.push({ from: time, to, targets });
+    }
+  }
+
+  return phases;
 }
 
 function LegendItem({
@@ -112,16 +160,25 @@ function LegendItem({
 export default function EnvironmentChart() {
   const { rows, status } = useEnvironmentHistory();
   const feedingHistory = useBoxStore((state) => state.feeding.history);
+  const mode = useBoxStore((state) => state.mode);
   const lightsOn = useBoxStore((state) => state.scheduler.on);
   const lightsOff = useBoxStore((state) => state.scheduler.off);
 
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [activeTime, setActiveTime] = useState<number | null>(null);
-  const [range, setRange] = useState<"week" | "day">("week");
+  const [range, setRange] = useState<"week" | "day">("day");
   const press = useRef({ x: 0, time: 0 });
 
   const allPoints = useMemo(
     () => rows.map((row) => ({ time: parseEspDate(row.datetime), row })),
+    [rows],
+  );
+  const weekPoints = useMemo(
+    () =>
+      thin(rows, WEEK_POINT_MS).map((row) => ({
+        time: parseEspDate(row.datetime),
+        row,
+      })),
     [rows],
   );
 
@@ -133,42 +190,98 @@ export default function EnvironmentChart() {
   const start = range === "week" ? newest - WEEK_MS : todayStart;
   const end = range === "week" ? newest : todayStart + DAY_MS;
 
-  const points = useMemo(
-    () => allPoints.filter((point) => point.time >= start && point.time <= end),
-    [allPoints, start, end],
-  );
+  const points = useMemo(() => {
+    if (range === "week") {
+      return weekPoints.filter(
+        (point) => point.time >= start && point.time <= end,
+      );
+    }
+
+    const today = allPoints.filter(
+      (point) => point.time >= start && point.time <= end,
+    );
+
+    // every 4th reading, counted back from the newest so it stays on the plot
+    return today.filter(
+      (_, index) => (today.length - 1 - index) % DAY_STEP === 0,
+    );
+  }, [allPoints, weekPoints, range, start, end]);
 
   const x = (time: number) =>
     ((time - start) / Math.max(end - start, 1)) * size.width;
 
-  // deviation from the ideal at that moment, 0 in the middle of the plot
-  const y = (metric: Metric, value: number, time: number) => {
-    const deviation =
-      value - targetsAt(time, lightsOn, lightsOff)[metric].ideal;
-    const level =
-      size.height / 2 - (deviation / RANGES[metric]) * (size.height / 2);
+  const phases = useMemo(
+    () =>
+      mode === "AUTO"
+        ? schedulePhases(start, end, lightsOn, lightsOff)
+        : [{ from: start, to: end, targets: VEG_TARGETS.lightsOn }],
+    [mode, start, end, lightsOn, lightsOff],
+  );
 
-    // keep extreme spikes inside the plot
-    return Math.min(Math.max(level, 1), size.height - 1);
+  const scales = useMemo(
+    () =>
+      points.length
+        ? {
+            temperature: scaleOf(points, phases, "temperature"),
+            humidity: scaleOf(points, phases, "humidity"),
+          }
+        : null,
+    [points, phases],
+  );
+
+  const y = (metric: Metric, value: number) => {
+    if (!scales) return size.height / 2;
+
+    const { min, max } = scales[metric];
+
+    return size.height - ((value - min) / (max - min)) * size.height;
   };
 
   const chart = useMemo(() => {
     if (!size.width) return null;
 
-    const toPath = (metric: Metric) =>
-      points
-        .map(
-          (point, index) =>
-            `${index === 0 ? "M" : "L"}${x(point.time).toFixed(1)} ${y(
-              metric,
-              point.row[metric],
-              point.time,
-            ).toFixed(1)}`,
-        )
-        .join(" ");
+    // cubic curve through the points, control points along the neighbours
+    const toPath = (metric: Metric) => {
+      const coords = points.map((point) => [
+        x(point.time),
+        y(metric, point.row[metric]),
+      ]);
 
-    const blockHeight = (metric: Metric) =>
-      (halfWidth(metric) / RANGES[metric]) * size.height;
+      return coords
+        .map(([px, py], index) => {
+          if (index === 0) return `M${px.toFixed(1)} ${py.toFixed(1)}`;
+
+          const before = coords[Math.max(index - 2, 0)];
+          const previous = coords[index - 1];
+          const next = coords[Math.min(index + 1, coords.length - 1)];
+          const c1x = previous[0] + (px - before[0]) * (TENSION / 2);
+          const c1y = previous[1] + (py - before[1]) * (TENSION / 2);
+          const c2x = px - (next[0] - previous[0]) * (TENSION / 2);
+          const c2y = py - (next[1] - previous[1]) * (TENSION / 2);
+
+          return `C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}`;
+        })
+        .join(" ");
+    };
+
+    // optimal range of each metric, per light phase
+    const blocks = phases.map((phase) => {
+      const block = (metric: Metric) => {
+        const top = y(metric, phase.targets[metric].max);
+
+        return {
+          y: top,
+          height: y(metric, phase.targets[metric].min) - top,
+        };
+      };
+
+      return {
+        x: x(phase.from),
+        width: x(phase.to) - x(phase.from),
+        temperature: block("temperature"),
+        humidity: block("humidity"),
+      };
+    });
 
     // grid lines: midnights for the week (label centred in the day column
     // that follows), every 3 h for the day (labels on 06 / 12 / 18)
@@ -209,14 +322,13 @@ export default function EnvironmentChart() {
     return {
       temperaturePath: toPath("temperature"),
       humidityPath: toPath("humidity"),
-      temperatureBlock: blockHeight("temperature"),
-      humidityBlock: blockHeight("humidity"),
+      blocks,
       grid,
       feeds,
     };
-    // x/y only depend on size, range and the light schedule
+    // x/y only depend on size, range and the scales
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, size, feedingHistory, range, start, end, lightsOn, lightsOff]);
+  }, [points, phases, scales, size, feedingHistory, range, start, end]);
 
   const panResponder = useMemo(
     () =>
@@ -325,23 +437,29 @@ export default function EnvironmentChart() {
       >
         {chart && (
           <Svg width={size.width} height={size.height} pointerEvents="none">
-            {/* optimal blocks around the 0 line: humidity wider, behind */}
-            <Rect
-              x={0}
-              y={(size.height - chart.humidityBlock) / 2}
-              width={size.width}
-              height={chart.humidityBlock}
-              fill={HUMIDITY_COLOR}
-              opacity={0.1}
-            />
-            <Rect
-              x={0}
-              y={(size.height - chart.temperatureBlock) / 2}
-              width={size.width}
-              height={chart.temperatureBlock}
-              fill={TEMPERATURE_COLOR}
-              opacity={0.16}
-            />
+            {/* optimal ranges: humidity behind, temperature on top */}
+            {chart.blocks.map((block) => (
+              <Rect
+                key={`humidity-${block.x}`}
+                x={block.x}
+                y={block.humidity.y}
+                width={block.width}
+                height={block.humidity.height}
+                fill={HUMIDITY_COLOR}
+                opacity={0.1}
+              />
+            ))}
+            {chart.blocks.map((block) => (
+              <Rect
+                key={`temperature-${block.x}`}
+                x={block.x}
+                y={block.temperature.y}
+                width={block.width}
+                height={block.temperature.height}
+                fill={TEMPERATURE_COLOR}
+                opacity={0.16}
+              />
+            ))}
 
             {chart.grid.map((line) => (
               <Line
@@ -415,7 +533,7 @@ export default function EnvironmentChart() {
                 />
                 <Circle
                   cx={x(reading.time)}
-                  cy={y("humidity", reading.row.humidity, reading.time)}
+                  cy={y("humidity", reading.row.humidity)}
                   r={4}
                   fill={HUMIDITY_COLOR}
                   stroke={COLORS.surface}
@@ -423,7 +541,7 @@ export default function EnvironmentChart() {
                 />
                 <Circle
                   cx={x(reading.time)}
-                  cy={y("temperature", reading.row.temperature, reading.time)}
+                  cy={y("temperature", reading.row.temperature)}
                   r={4}
                   fill={TEMPERATURE_COLOR}
                   stroke={COLORS.surface}
@@ -432,6 +550,24 @@ export default function EnvironmentChart() {
               </>
             )}
           </Svg>
+        )}
+
+        {/* scale ends: temperature on the left, humidity on the right */}
+        {scales && (
+          <>
+            <Text style={[styles.scaleText, styles.scaleTopLeft]}>
+              {`${scales.temperature.max.toFixed(1)}°`}
+            </Text>
+            <Text style={[styles.scaleText, styles.scaleBottomLeft]}>
+              {`${scales.temperature.min.toFixed(1)}°`}
+            </Text>
+            <Text style={[styles.scaleText, styles.scaleTopRight]}>
+              {`${scales.humidity.max.toFixed(0)}%`}
+            </Text>
+            <Text style={[styles.scaleText, styles.scaleBottomRight]}>
+              {`${scales.humidity.min.toFixed(0)}%`}
+            </Text>
+          </>
         )}
       </View>
 
@@ -529,6 +665,17 @@ const styles = StyleSheet.create({
   plot: {
     flex: 1,
   },
+
+  scaleText: {
+    position: "absolute",
+    fontSize: 9,
+    color: COLORS.textMuted,
+  },
+
+  scaleTopLeft: { top: 2, left: 3, color: TEMPERATURE_COLOR },
+  scaleBottomLeft: { bottom: 2, left: 3, color: TEMPERATURE_COLOR },
+  scaleTopRight: { top: 2, right: 3, color: HUMIDITY_COLOR },
+  scaleBottomRight: { bottom: 2, right: 3, color: HUMIDITY_COLOR },
 
   axis: {
     height: 16,

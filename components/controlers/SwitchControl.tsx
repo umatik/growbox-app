@@ -9,6 +9,8 @@ interface SwitchControlProps {
   onChange: (value: boolean) => void;
   icon: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
+  // replaces the default ON / OFF under the title
+  statusText?: string;
 }
 
 export default function SwitchControl({
@@ -17,6 +19,7 @@ export default function SwitchControl({
   onChange,
   icon,
   iconColor = COLORS.blue,
+  statusText,
 }: SwitchControlProps) {
   return (
     <View style={styles.controlCard}>
@@ -26,7 +29,7 @@ export default function SwitchControl({
 
       <View style={styles.controlText}>
         <Text style={styles.controlTitle}>{title}</Text>
-        <Text style={styles.status}>{value ? "ON" : "OFF"}</Text>
+        <Text style={styles.status}>{statusText ?? (value ? "ON" : "OFF")}</Text>
       </View>
 
       <View style={styles.switchBox}>

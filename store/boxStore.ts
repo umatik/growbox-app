@@ -17,6 +17,9 @@ export interface DeviceState {
   dayLevel: number;
   nightLevel: number;
   fanSpeed: number;
+  // what the fan actually runs at (fanAuto overrides dayLevel)
+  fanLevel: number;
+  fanAuto: boolean;
 }
 
 export interface AutoState {
@@ -63,6 +66,8 @@ interface BoxStore {
   setDayLevel: (level: number) => void;
   setNightLevel: (level: number) => void;
   setFanSpeed: (speed: number) => void;
+  setFanLevel: (level: number) => void;
+  setFanAuto: (enabled: boolean) => void;
 
   setNightFanEnabled: (enabled: boolean) => void;
 
@@ -93,6 +98,8 @@ const initialState = {
     dayLevel: 50,
     nightLevel: 30,
     fanSpeed: 50,
+    fanLevel: 50,
+    fanAuto: false,
   },
 
   auto: {
@@ -188,6 +195,22 @@ export const useBoxStore = create<BoxStore>((set) => ({
       devices: {
         ...current.devices,
         fanSpeed: speed,
+      },
+    })),
+
+  setFanLevel: (level) =>
+    set((current) => ({
+      devices: {
+        ...current.devices,
+        fanLevel: level,
+      },
+    })),
+
+  setFanAuto: (enabled) =>
+    set((current) => ({
+      devices: {
+        ...current.devices,
+        fanAuto: enabled,
       },
     })),
 

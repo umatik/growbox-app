@@ -8,9 +8,6 @@ import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { useFeedingStatus } from "@/hooks/useFeedingStatus";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// the ESP firmware has no POST /feeding yet, so the button does nothing
-// until it does
-const FEEDING_ENABLED = false;
 
 function getLastFedLabel(lastFedAt: string | null) {
   if (!lastFedAt) return "Never";
@@ -51,7 +48,7 @@ export default function FeedingCard() {
   const [saving, setSaving] = useState(false);
 
   const handleFed = async () => {
-    if (!FEEDING_ENABLED || saving) return;
+    if (saving) return;
 
     try {
       setSaving(true);
