@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
-import { EspResponse } from "@box-controller/shared/interfaces/esp.interface";
-import useEsp from "@box-controller/shared/hooks/useEsp";
+import { EspResponse } from "@/shared/interfaces/esp.interface";
+import useEsp from "@/shared/hooks/useEsp";
 import { useBoxStore } from "@/store";
 
 export default function useBoxController() {

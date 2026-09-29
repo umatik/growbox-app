@@ -39,3 +39,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# were covered by the monorepo root .gitignore
+.env
+.env.local
+build/
+.idea/
+*.log

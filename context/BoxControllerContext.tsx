@@ -6,9 +6,9 @@ import {
   useEffect,
   useState,
 } from "react";
-import useEsp from "@box-controller/shared/hooks/useEsp";
+import useEsp from "@/shared/hooks/useEsp";
 import useMockEsp from "@/mocks/useMockEsp";
-import { EspResponse } from "@box-controller/shared/interfaces/esp.interface";
+import { EspResponse } from "@/shared/interfaces/esp.interface";
 import { useBoxStore } from "@/store";
 
 type BoxController = ReturnType<typeof useEsp>;

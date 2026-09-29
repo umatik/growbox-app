@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { EnvironmentRow } from "@box-controller/shared/interfaces/esp.interface";
+import { EnvironmentRow } from "@/shared/interfaces/esp.interface";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import {
   getNewestDatetime,

@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { EnvironmentRow } from "@box-controller/shared/interfaces/esp.interface";
+import { EnvironmentRow } from "@/shared/interfaces/esp.interface";
 
 // local copy of the ESP's SD-card log: the app only asks the ESP for rows
 // newer than the newest one stored here. Mock data gets its own file so it

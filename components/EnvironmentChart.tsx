@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
-import { EnvironmentRow } from "@box-controller/shared/interfaces/esp.interface";
+import { EnvironmentRow } from "@/shared/interfaces/esp.interface";
 import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";

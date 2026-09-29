@@ -3,7 +3,7 @@ import {
   EnvironmentResponse,
   EnvironmentRow,
   EspResponse,
-} from "@box-controller/shared/interfaces/esp.interface";
+} from "@/shared/interfaces/esp.interface";
 import { VEG_TARGETS } from "@/data/growTargets";
 
 const MOCK_FLOWERING_START_DATE = "2026-09-23";

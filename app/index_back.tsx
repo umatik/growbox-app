@@ -2,7 +2,7 @@ import { StyleSheet, Switch } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { useEffect, useState } from "react";
 import LoadingState from "@/components/state/loadingState";
-import useEsp from "@box-controller/shared/hooks/useEsp";
+import useEsp from "@/shared/hooks/useEsp";
 import Slider from "@react-native-community/slider";
 
 export default function TabOneScreen() {
