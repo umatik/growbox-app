@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/utils/haptics";
 import Text from "@/components/AppText";
 import SlideToConfirm from "@/components/SlideToConfirm";
 import { COLORS } from "@/constants/Colors";
@@ -58,18 +58,18 @@ export default function FeedingCard() {
     try {
       setSaving(true);
       await logFeeding(new Date().toISOString());
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notify(Haptics.NotificationFeedbackType.Success);
       setConfirming(false);
     } catch {
       // Error is handled by the controller.
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Haptics.notify(Haptics.NotificationFeedbackType.Error);
     } finally {
       setSaving(false);
     }
   };
 
   const openConfirm = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impact(Haptics.ImpactFeedbackStyle.Medium);
     setConfirming(true);
   };
 

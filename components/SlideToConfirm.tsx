@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/utils/haptics";
 import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 
@@ -54,7 +54,7 @@ export default function SlideToConfirm({
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           drag.current = { step: 0, armed: false };
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Haptics.impact(Haptics.ImpactFeedbackStyle.Light);
         },
         onPanResponderMove: (_, gesture) => {
           const max = state.current.maxOffset;
@@ -69,13 +69,13 @@ export default function SlideToConfirm({
 
           // crossing the threshold "clicks" into place, backing off lets go
           if (armed !== drag.current.armed) {
-            Haptics.impactAsync(
+            Haptics.impact(
               armed
                 ? Haptics.ImpactFeedbackStyle.Rigid
                 : Haptics.ImpactFeedbackStyle.Soft,
             );
           } else if (step !== drag.current.step && !armed) {
-            Haptics.selectionAsync();
+            Haptics.selection();
           }
 
           drag.current = { step, armed };
@@ -89,10 +89,10 @@ export default function SlideToConfirm({
               duration: 120,
               useNativeDriver: true,
             }).start();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            Haptics.impact(Haptics.ImpactFeedbackStyle.Heavy);
             state.current.onConfirm();
           } else {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+            Haptics.impact(Haptics.ImpactFeedbackStyle.Soft);
             Animated.spring(offset, {
               toValue: 0,
               useNativeDriver: true,
