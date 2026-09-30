@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   containerCompact: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     gap: 12,
   },
   gauge: {

@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   infoCard: {
     marginHorizontal: 16,
     marginTop: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 20,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
