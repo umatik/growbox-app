@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Text from "@/components/AppText";
+import SlideToConfirm from "@/components/SlideToConfirm";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
@@ -46,6 +48,9 @@ export default function FeedingCard() {
   const { logFeeding } = useBoxControllerContext();
 
   const [saving, setSaving] = useState(false);
+  // the buttons only open a slide-to-confirm sheet, so a stray tap can't
+  // log a watering
+  const [confirming, setConfirming] = useState(false);
 
   const handleFed = async () => {
     if (saving) return;
@@ -53,30 +58,76 @@ export default function FeedingCard() {
     try {
       setSaving(true);
       await logFeeding(new Date().toISOString());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setConfirming(false);
     } catch {
       // Error is handled by the controller.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setSaving(false);
     }
   };
 
+  const openConfirm = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setConfirming(true);
+  };
+
+  const closeConfirm = () => {
+    if (!saving) setConfirming(false);
+  };
+
+  const confirmSheet = (
+    <Modal
+      visible={confirming}
+      transparent
+      animationType="fade"
+      onRequestClose={closeConfirm}
+    >
+      <Pressable style={styles.backdrop} onPress={closeConfirm}>
+        {/* taps on the sheet itself must not close it */}
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Log a feeding?</Text>
+            <Pressable
+              onPress={closeConfirm}
+              hitSlop={12}
+              disabled={saving}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons name="close" size={24} color={COLORS.textMuted} />
+            </Pressable>
+          </View>
+
+          <Text style={styles.sheetText}>
+            Slide to save today&apos;s watering on the controller.
+          </Text>
+
+          <SlideToConfirm
+            label="Slide to feed"
+            onConfirm={handleFed}
+            loading={saving}
+            color={status === "overdue" ? COLORS.red : COLORS.green}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   // a missed watering turns the whole card into one big call to action
   if (status === "overdue") {
     return (
-      <Pressable
-        style={({ pressed }) => [styles.feedNow, pressed && styles.pressed]}
-        onPress={handleFed}
-        disabled={saving}
-      >
-        {saving ? (
-          <ActivityIndicator size="small" color={COLORS.text} />
-        ) : (
-          <>
-            <Ionicons name="water" size={24} color={COLORS.text} />
-            <Text style={styles.feedNowText}>Feed me now!</Text>
-          </>
-        )}
-      </Pressable>
+      <>
+        <Pressable
+          style={({ pressed }) => [styles.feedNow, pressed && styles.pressed]}
+          onPress={openConfirm}
+        >
+          <Ionicons name="water" size={24} color={COLORS.text} />
+          <Text style={styles.feedNowText}>Feed me now!</Text>
+        </Pressable>
+
+        {confirmSheet}
+      </>
     );
   }
 
@@ -107,15 +158,12 @@ export default function FeedingCard() {
 
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        onPress={handleFed}
-        disabled={saving}
+        onPress={openConfirm}
       >
-        {saving ? (
-          <ActivityIndicator size="small" color={COLORS.surfaceLight} />
-        ) : (
-          <Text style={styles.buttonText}>Feeded</Text>
-        )}
+        <Text style={styles.buttonText}>Feeded</Text>
       </Pressable>
+
+      {confirmSheet}
     </View>
   );
 }
@@ -200,5 +248,39 @@ const styles = StyleSheet.create({
     color: COLORS.surfaceLight,
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "flex-end",
+  },
+
+  sheet: {
+    margin: 12,
+    marginBottom: 34,
+    padding: 20,
+    gap: 16,
+    borderRadius: 24,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  sheetTitle: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+
+  sheetText: {
+    color: COLORS.textMuted,
+    fontSize: 15,
   },
 });
