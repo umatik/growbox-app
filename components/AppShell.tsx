@@ -89,11 +89,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // same size as the mode value next to it
   title: {
     flexShrink: 1,
     color: COLORS.text,
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: "700",
   },
 
