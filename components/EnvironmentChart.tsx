@@ -21,15 +21,13 @@ import {
 // Readings are drawn as plain values, each metric on its own scale (like the
 // desktop chart). The blocks behind them are the optimal range of each metric
 // for the light at that time - MANUAL (veg) keeps it on nonstop, AUTO follows
-// the light schedule - and the scale always takes them in.
+// the light schedule.
 
-// a flat reading still gets this much span, so noise isn't blown up
-const MIN_SPAN: Record<"temperature" | "humidity", number> = {
-  temperature: 1,
-  humidity: 2,
+// each metric always on the same fixed scale, whatever the readings
+const FIXED_SCALES: Record<Metric, { min: number; max: number }> = {
+  temperature: { min: 20, max: 30 },
+  humidity: { min: 30, max: 90 },
 };
-// room above and below the extremes, as a share of the span
-const SCALE_PADDING = 0.1;
 
 const TEMPERATURE_COLOR = COLORS.yellow;
 const HUMIDITY_COLOR = COLORS.blue;
@@ -72,25 +70,6 @@ function formatScrubTime(time: number) {
     2,
     "0",
   )}:${String(date.getMinutes()).padStart(2, "0")}`;
-}
-
-// min / max of a metric over the visible points and the optimal ranges shown,
-// padded
-function scaleOf(points: Point[], phases: Phase[], metric: Metric) {
-  const values = points.map((point) => point.row[metric]);
-  const low = Math.min(
-    ...values,
-    ...phases.map((phase) => phase.targets[metric].min),
-  );
-  const high = Math.max(
-    ...values,
-    ...phases.map((phase) => phase.targets[metric].max),
-  );
-  const span = Math.max(high - low, MIN_SPAN[metric]);
-  const middle = (low + high) / 2;
-  const padded = span * (1 + 2 * SCALE_PADDING);
-
-  return { min: middle - padded / 2, max: middle + padded / 2 };
 }
 
 function toMinutes(time: string) {
@@ -184,11 +163,10 @@ export default function EnvironmentChart() {
 
   const newest = allPoints[allPoints.length - 1]?.time ?? 0;
 
-  // week: a full week back from the newest reading, so the day grid is
-  // complete even while history is short; day: today, midnight to midnight
-  const todayStart = new Date(newest).setHours(0, 0, 0, 0);
-  const start = range === "week" ? newest - WEEK_MS : todayStart;
-  const end = range === "week" ? newest : todayStart + DAY_MS;
+  // a full week / day back from the newest reading, so the grid is complete
+  // even while history is short
+  const start = newest - (range === "week" ? WEEK_MS : DAY_MS);
+  const end = newest;
 
   const points = useMemo(() => {
     if (range === "week") {
@@ -197,13 +175,13 @@ export default function EnvironmentChart() {
       );
     }
 
-    const today = allPoints.filter(
+    const day = allPoints.filter(
       (point) => point.time >= start && point.time <= end,
     );
 
     // every 4th reading, counted back from the newest so it stays on the plot
-    return today.filter(
-      (_, index) => (today.length - 1 - index) % DAY_STEP === 0,
+    return day.filter(
+      (_, index) => (day.length - 1 - index) % DAY_STEP === 0,
     );
   }, [allPoints, weekPoints, range, start, end]);
 
@@ -218,16 +196,7 @@ export default function EnvironmentChart() {
     [mode, start, end, lightsOn, lightsOff],
   );
 
-  const scales = useMemo(
-    () =>
-      points.length
-        ? {
-            temperature: scaleOf(points, phases, "temperature"),
-            humidity: scaleOf(points, phases, "humidity"),
-          }
-        : null,
-    [points, phases],
-  );
+  const scales = points.length ? FIXED_SCALES : null;
 
   const y = (metric: Metric, value: number) => {
     if (!scales) return size.height / 2;
@@ -284,7 +253,7 @@ export default function EnvironmentChart() {
     });
 
     // grid lines: midnights for the week (label centred in the day column
-    // that follows), every 3 h for the day (labels on 06 / 12 / 18)
+    // that follows), every 3 h for the day (labels on 00 / 06 / 12 / 18)
     const grid: { time: number; label: string | null; labelAt: number }[] = [];
 
     if (range === "week") {
@@ -304,13 +273,18 @@ export default function EnvironmentChart() {
         midnight.setDate(midnight.getDate() + 1);
       }
     } else {
-      for (let hour = 3; hour < 24; hour += 3) {
-        const time = start + hour * HOUR_MS;
+      // full hours divisible by 3 within the last 24 h
+      const mark = new Date(start);
+      mark.setMinutes(0, 0, 0);
+      mark.setHours(mark.getHours() + 3 - (mark.getHours() % 3));
+
+      for (; mark.getTime() < end; mark.setHours(mark.getHours() + 3)) {
+        const hour = mark.getHours();
 
         grid.push({
-          time,
+          time: mark.getTime(),
           label: hour % 6 === 0 ? String(hour).padStart(2, "0") : null,
-          labelAt: time,
+          labelAt: mark.getTime(),
         });
       }
     }
@@ -426,7 +400,7 @@ export default function EnvironmentChart() {
             ? formatScrubTime(reading.time)
             : range === "week"
               ? "7 days"
-              : "Today"}
+              : "24 h"}
         </Text>
       </View>
 

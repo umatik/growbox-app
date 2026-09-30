@@ -10,18 +10,18 @@ export interface PhaseTargets {
   humidity: TargetRange;
 }
 
-// Vegetative stage, small LED tent. Lights off runs a few degrees cooler and
-// a bit more humid. Sources: Spider Farmer, Mars Hydro, Trimleaf, Gorilla
-// Grow Tent guides (lights on 21-29 °C / 55-70 % RH, lights off 18-24 °C,
-// VPD 0.8-1.1 kPa).
+// Vegetative stage sweet spot. Temperature: Trimleaf 24-27 °C, Mars Hydro
+// 24-28 °C. Humidity from VPD 0.8-1.2 kPa (all guides) with an LED-lit leaf
+// ~2 °C below 25 °C air: 52-62 % RH, ideal 1.0 kPa at 57 %. Lights off has
+// no sweet spot in the guides - Royal Queen Seeds 20-24 °C.
 export const VEG_TARGETS: { lightsOn: PhaseTargets; lightsOff: PhaseTargets } =
   {
     lightsOn: {
-      temperature: { min: 24, max: 26, ideal: 25 },
-      humidity: { min: 55, max: 65, ideal: 60 },
+      temperature: { min: 24, max: 27, ideal: 25 },
+      humidity: { min: 52, max: 62, ideal: 57 },
     },
     lightsOff: {
-      temperature: { min: 20, max: 22, ideal: 21 },
-      humidity: { min: 60, max: 70, ideal: 65 },
+      temperature: { min: 20, max: 24, ideal: 22 },
+      humidity: { min: 52, max: 62, ideal: 57 },
     },
   };

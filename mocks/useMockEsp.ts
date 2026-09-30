@@ -9,7 +9,10 @@ import { VEG_TARGETS } from "@/data/growTargets";
 const MOCK_FLOWERING_START_DATE = "2026-09-23";
 const DAY_MS = 86400000;
 const HOUR_MS = 3600000;
-const MOCK_DAYS = 21;
+// EXPO_PUBLIC_MOCK_IDEAL=true: 5 calm days close to the ideal, no humidity
+// spikes and no too-warm afternoon
+const MOCK_IDEAL = process.env.EXPO_PUBLIC_MOCK_IDEAL === "true";
+const MOCK_DAYS = MOCK_IDEAL ? 5 : 21;
 
 // deterministic 0..1 "random" per number, so every render sees the same data
 const hash = (value: number) => {
@@ -55,7 +58,7 @@ const MOCK_FEEDING_HISTORY = MOCK_FEED_TIMES.map((time) =>
 const createInitialResponse = (): EspResponse =>
   ({
     status: {
-      mode: "AUTO",
+      mode: MOCK_IDEAL ? "MANUAL" : "AUTO",
       state: "DAY",
     },
     sensor: {
@@ -109,7 +112,8 @@ const mockFanAutoLevel = (response: EspResponse) => {
   );
 };
 
-const MOCK_LOG_INTERVAL_MS = 2 * 60 * 1000;
+// one row every 5 min, like the ESP logs to the SD card
+const MOCK_LOG_INTERVAL_MS = 5 * 60 * 1000;
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -128,7 +132,7 @@ const formatEspDate = (date: Date) =>
 // calm days stay within ±0.3; restless days (about 30 %) swing ~2.3× more
 const baseDeviation = (time: number, seed: number) => {
   const dayNumber = Math.floor(time / DAY_MS);
-  const restless = hash(dayNumber * 7 + seed) < 0.3;
+  const restless = !MOCK_IDEAL && hash(dayNumber * 7 + seed) < 0.3;
   const wave =
     Math.sin(time / (5 * HOUR_MS) + seed) * 0.17 +
     Math.sin(time / (1.7 * HOUR_MS) + seed * 2) * 0.07 +
@@ -161,39 +165,52 @@ const HEAT_EPISODE_AT = new Date(Date.now() - 2 * DAY_MS).setHours(15, 0, 0, 0);
 const heatEpisode = (time: number) =>
   1.2 * Math.exp(-(((time - HEAT_EPISODE_AT) / (2 * HOUR_MS)) ** 2));
 
+// after the light switches, readings settle on the new phase's ideal
+// gradually (~1 h), not in one step
+const SETTLE_MS = 30 * 60 * 1000;
+
 const createMockRow = (time: number): EnvironmentRow => {
   const date = new Date(time);
   const hour = date.getHours() + date.getMinutes() / 60;
+  // ideal mode is MANUAL like the real box: lights on nonstop; otherwise
   // lights on 18:00-06:00, like the mock light schedule
-  const isDay = hour >= 18 || hour < 6;
+  const isDay = MOCK_IDEAL || hour >= 18 || hour < 6;
   const targets = isDay ? VEG_TARGETS.lightsOn : VEG_TARGETS.lightsOff;
+  const previous = isDay ? VEG_TARGETS.lightsOff : VEG_TARGETS.lightsOn;
+  const sinceSwitch = ((isDay ? hour - 18 + 24 : hour - 6) % 24) * HOUR_MS;
+  const settled = MOCK_IDEAL ? 1 : 1 - Math.exp(-sinceSwitch / SETTLE_MS);
 
   const halfWidth = (range: { min: number; max: number }) =>
     (range.max - range.min) / 2;
+  const ideal = (metric: "temperature" | "humidity") =>
+    previous[metric].ideal +
+    (targets[metric].ideal - previous[metric].ideal) * settled;
 
-  const temperatureDeviation = baseDeviation(time, 1) + heatEpisode(time);
-  const humidityDeviation = baseDeviation(time, 2) + humiditySpike(time);
+  const temperatureDeviation =
+    baseDeviation(time, 1) + (MOCK_IDEAL ? 0 : heatEpisode(time));
+  const humidityDeviation =
+    baseDeviation(time, 2) + (MOCK_IDEAL ? 0 : humiditySpike(time));
 
   return {
     datetime: formatEspDate(date),
     day_night: isDay ? "DAY" : "NIGHT",
     temperature:
       Math.round(
-        (targets.temperature.ideal +
+        (ideal("temperature") +
           temperatureDeviation * halfWidth(targets.temperature)) *
           10,
       ) / 10,
     humidity:
       Math.round(
-        (targets.humidity.ideal +
+        (ideal("humidity") +
           humidityDeviation * halfWidth(targets.humidity)) *
           10,
       ) / 10,
   };
 };
 
-// the fake SD log covers the last 3 weeks, one row every 2 min
-const MOCK_LOG_ROWS = MOCK_DAYS * 24 * 30;
+// the fake SD log covers the last MOCK_DAYS days
+const MOCK_LOG_ROWS = (MOCK_DAYS * DAY_MS) / MOCK_LOG_INTERVAL_MS;
 
 const createMockEnvironment = (limit: number, before?: string, step = 1) => {
   const end =
