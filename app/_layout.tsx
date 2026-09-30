@@ -6,6 +6,7 @@ import {
 } from "react-native";
 import Text from "@/components/AppText";
 import { useFonts } from "expo-font";
+import { LeagueSpartan_800ExtraBold } from "@expo-google-fonts/league-spartan/800ExtraBold";
 import { DarkTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -117,6 +118,9 @@ function AppContent() {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    // closest free match to the BioBizz label lettering (compared by
+    // width and stroke weight against the bottle labels)
+    "LeagueSpartan-ExtraBold": LeagueSpartan_800ExtraBold,
   });
 
   useEffect(() => {

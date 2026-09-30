@@ -67,15 +67,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
 
+  // BioBizz label lettering
   name: {
     flexShrink: 1,
     marginRight: 12,
+    fontFamily: "LeagueSpartan-ExtraBold",
+    // the font's tall ascender lifts the caps above the dosage next to it
+    marginTop: 4,
     fontSize: 16,
-    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 
   dosage: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
   },
 });
