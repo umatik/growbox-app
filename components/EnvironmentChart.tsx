@@ -39,6 +39,8 @@ const WEEK_MS = 7 * DAY_MS;
 const HOUR_MS = 60 * 60 * 1000;
 // the week is thinned to one point per 20 min, the day to every 4th reading
 const WEEK_POINT_MS = 20 * 60 * 1000;
+// room right of the newest reading, so it isn't glued to the frame
+const PLOT_INSET_RIGHT = 24;
 const DAY_STEP = 4;
 // curve smoothing, same as the desktop chart (Chart.js tension)
 const TENSION = 0.3;
@@ -185,8 +187,9 @@ export default function EnvironmentChart() {
     );
   }, [allPoints, weekPoints, range, start, end]);
 
+  const plotWidth = Math.max(size.width - PLOT_INSET_RIGHT, 1);
   const x = (time: number) =>
-    ((time - start) / Math.max(end - start, 1)) * size.width;
+    ((time - start) / Math.max(end - start, 1)) * plotWidth;
 
   const phases = useMemo(
     () =>
@@ -244,9 +247,13 @@ export default function EnvironmentChart() {
         };
       };
 
+      // the bands still run to the frame edges - no empty strips
+      const from = phase.from <= start ? 0 : x(phase.from);
+      const to = phase.to >= end ? size.width : x(phase.to);
+
       return {
-        x: x(phase.from),
-        width: x(phase.to) - x(phase.from),
+        x: from,
+        width: to - from,
         temperature: block("temperature"),
         humidity: block("humidity"),
       };
@@ -337,7 +344,8 @@ export default function EnvironmentChart() {
   function scrubAt(locationX: number) {
     if (!size.width || !points.length) return;
 
-    const time = start + (locationX / size.width) * (end - start);
+    const time =
+      start + (locationX / plotWidth) * (end - start);
     let nearest = points[0];
 
     points.forEach((point) => {
