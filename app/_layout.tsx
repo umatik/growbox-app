@@ -20,6 +20,7 @@ import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { useBoxStore } from "@/store";
 import { COLORS } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
+import AutoRetry from "@/components/AutoRetry";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -85,6 +86,8 @@ function ConnectionOverlay() {
               <Text style={styles.reloadButtonText}>RELOAD</Text>
             )}
           </TouchableOpacity>
+
+          <AutoRetry onRetry={reloadConnection} busy={loading} />
 
           {showOkButton && (
             <TouchableOpacity

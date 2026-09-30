@@ -17,6 +17,7 @@ import FloweringRequired from "@/components/FloweringRequired";
 import { useBoxStore } from "@/store";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { COLORS } from "@/constants/Colors";
+import AutoRetry from "@/components/AutoRetry";
 
 export default function HomeScreen() {
   const mode = useBoxStore((state) => state.mode);
@@ -77,6 +78,8 @@ export default function HomeScreen() {
               <Text style={styles.reloadButtonText}>RELOAD</Text>
             )}
           </TouchableOpacity>
+
+          <AutoRetry onRetry={reloadConnection} busy={loading} />
 
           {showOkButton && (
             <TouchableOpacity
