@@ -14,10 +14,11 @@ function barsFor(rssi: number) {
   return 1;
 }
 
-// the ESP32 holds a stable link down to about -80 dBm
+// below -70 dBm the box link already drops requests and slows down
+// (measured: -72..-82 dBm in the tent), so that counts as bad
 function colorFor(rssi: number) {
-  if (rssi >= -67) return COLORS.green;
-  if (rssi >= -80) return COLORS.yellow;
+  if (rssi >= -60) return COLORS.green;
+  if (rssi >= -70) return COLORS.yellow;
   return COLORS.red;
 }
 
