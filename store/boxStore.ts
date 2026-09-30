@@ -53,6 +53,8 @@ interface BoxStore {
   flowering: FloweringState;
   scheduler: SchedulerState;
   feeding: FeedingState;
+  // ESP WiFi signal in dBm, null = unknown
+  rssi: number | null;
 
   setMode: (mode: BoxMode) => void;
   setLastConnectedMode: (mode: BoxMode) => void;
@@ -74,6 +76,7 @@ interface BoxStore {
   setFlowering: (flowering: Partial<FloweringState>) => void;
   setScheduler: (scheduler: Partial<SchedulerState>) => void;
   setFeeding: (feeding: Partial<FeedingState>) => void;
+  setRssi: (rssi: number | null) => void;
 
   reset: () => void;
 }
@@ -122,6 +125,8 @@ const initialState = {
     count: 0,
     history: [],
   },
+
+  rssi: null as number | null,
 };
 
 export const useBoxStore = create<BoxStore>((set) => ({
@@ -133,6 +138,8 @@ export const useBoxStore = create<BoxStore>((set) => ({
     set({ lastConnectedMode: mode }),
 
   setState: (state) => set({ state }),
+
+  setRssi: (rssi) => set({ rssi }),
 
   setSensor: (sensor) =>
     set((current) => ({

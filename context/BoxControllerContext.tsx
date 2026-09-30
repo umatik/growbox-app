@@ -64,6 +64,7 @@ export function BoxControllerProvider({
 
   const setFlowering = useBoxStore((state) => state.setFlowering);
   const setFeeding = useBoxStore((state) => state.setFeeding);
+  const setRssi = useBoxStore((state) => state.setRssi);
 
   const handleResponse = useCallback(
     (response: EspResponse) => {
@@ -89,6 +90,7 @@ export function BoxControllerProvider({
         response.status.fanLevel ?? response.config.dimmer.day.level,
       );
       setFanAuto(Boolean(response.config.fanAuto?.enabled));
+      setRssi(response.status.rssi ?? null);
 
       setNightFanEnabled(Boolean(response.config.auto.nightFan.enabled));
 
@@ -118,6 +120,7 @@ export function BoxControllerProvider({
       setNightFanEnabled,
       setFlowering,
       setFeeding,
+      setRssi,
     ],
   );
 

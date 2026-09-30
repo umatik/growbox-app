@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
+import SignalStatus from "@/components/SignalStatus";
 
 interface AppShellProps {
   children: ReactNode;
@@ -27,6 +28,8 @@ export default function AppShell({
         <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
           {title}
         </Text>
+
+        <SignalStatus />
 
         <View style={styles.modeStatus}>
           <Text style={styles.modeLabel}>MODE</Text>

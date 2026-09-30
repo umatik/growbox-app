@@ -60,6 +60,7 @@ const createInitialResponse = (): EspResponse =>
     status: {
       mode: MOCK_IDEAL ? "MANUAL" : "AUTO",
       state: "DAY",
+      rssi: -64,
     },
     sensor: {
       temperature: 24.6,

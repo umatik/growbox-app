@@ -9,6 +9,8 @@ export interface EspStatus {
   state: "DAY" | "NIGHT";
   // actual dimmer level; differs from dimmer.day while fanAuto drives it
   fanLevel?: number;
+  // WiFi signal of the ESP in dBm; missing on older firmware
+  rssi?: number | null;
 }
 
 export interface EspSensor {
