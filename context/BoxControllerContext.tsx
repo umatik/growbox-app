@@ -135,10 +135,29 @@ export function BoxControllerProvider({
   const offlineMode = process.env.EXPO_PUBLIC_OFFLINE_MODE === "true";
   const controller = offlineMode ? mockController : realController;
 
+  // The ESP serves requests one at a time, so requests that pile up on a
+  // weak link (a poll every 5 s with a 10 s timeout, plus the auto retry)
+  // queue there and keep it busy for over a minute. At most one
+  // /config request is in flight; callers meanwhile share it.
+  const configRequest = useRef<Promise<void> | null>(null);
+
+  const fetchConfigOnce = useCallback(() => {
+    if (!configRequest.current) {
+      configRequest.current = controller
+        .fetchConfig()
+        .then(() => undefined)
+        .finally(() => {
+          configRequest.current = null;
+        });
+    }
+
+    return configRequest.current;
+  }, [controller.fetchConfig]);
+
   // one poll; the connection only counts as lost after several misses
   const poll = useCallback(async () => {
     try {
-      await controller.fetchConfig();
+      await fetchConfigOnce();
       failures.current = 0;
       setConnectionLost(false);
       return true;
@@ -151,7 +170,7 @@ export function BoxControllerProvider({
 
       return false;
     }
-  }, [controller.fetchConfig]);
+  }, [fetchConfigOnce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,7 +178,7 @@ export function BoxControllerProvider({
     const loadInitialConfig = async () => {
       for (let attempt = 1; attempt <= INITIAL_ATTEMPTS; attempt += 1) {
         try {
-          await controller.fetchConfig();
+          await fetchConfigOnce();
           failures.current = 0;
           setConnectionLost(false);
           break;
@@ -183,14 +202,14 @@ export function BoxControllerProvider({
     return () => {
       cancelled = true;
     };
-  }, [controller.fetchConfig]);
+  }, [fetchConfigOnce]);
 
   const reloadConnection = useCallback(async () => {
     setConnectionDismissed(false);
     setReloading(true);
 
     try {
-      await controller.fetchConfig();
+      await fetchConfigOnce();
       failures.current = 0;
       setConnectionLost(false);
     } catch {
@@ -198,7 +217,7 @@ export function BoxControllerProvider({
     } finally {
       setReloading(false);
     }
-  }, [controller.fetchConfig]);
+  }, [fetchConfigOnce]);
 
   // keeps polling while disconnected too, so the app comes back by itself
   useEffect(() => {
