@@ -101,7 +101,7 @@ export default function FloweringStatusCard() {
               ? "flush"
               : week >= HARVEST_WEEK
                 ? "harvest"
-                : `of ${TOTAL_WEEKS} · ${Math.round(progress)}%`}
+                : `${Math.round(progress)}% of week ${week}`}
           </Text>
         </View>
       </View>
