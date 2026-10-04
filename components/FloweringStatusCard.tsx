@@ -115,7 +115,7 @@ export default function FloweringStatusCard() {
         <FanGauge pct={pct} />
         <View style={styles.info}>
           <Text style={styles.detail} numberOfLines={1}>
-            {pct === 0 ? "off" : "auto"}
+            {pct === 0 ? "off" : `${pct}%`}
           </Text>
         </View>
       </View>
