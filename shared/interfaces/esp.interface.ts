@@ -11,6 +11,28 @@ export interface EspStatus {
   fanLevel?: number;
   // WiFi signal of the ESP in dBm; missing on older firmware
   rssi?: number | null;
+  // humidifier on the mini ESP; missing on firmware without it
+  humidifier?: EspHumidifierStatus;
+}
+
+export interface EspHumidifierStatus {
+  // the mini ESP answered recently
+  online: boolean;
+  // what the main ESP asks for
+  want: boolean;
+  // relay state reported back by the mini ESP
+  on: boolean;
+}
+
+export interface HumidifierBand {
+  enabled: boolean;
+  min: number;
+  max: number;
+}
+
+export interface HumidifierConfig {
+  manual: HumidifierBand;
+  auto: HumidifierBand;
 }
 
 export interface EspSensor {
@@ -34,6 +56,7 @@ export interface EspConfig {
   // optional until every firmware build exposes it
   feeding?: FeedingConfig;
   fanAuto?: FanAutoConfig;
+  humidifier?: HumidifierConfig;
 }
 
 // MANUAL (veg) mode: the ESP sets the fan level from the temperature
@@ -66,6 +89,8 @@ export interface FanLevel {
 export interface AutoConfig {
   enabled: boolean;
   floweringStartDate: string | null;
+  // exact start, "YYYY-MM-DD HH:MM:SS" local; missing on older firmware
+  floweringStartedAt?: string | null;
   nightFan: FanWhenLightOffConfig;
 }
 

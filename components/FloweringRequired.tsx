@@ -3,7 +3,7 @@ import Text from "@/components/AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
-import FloweringSchedule from "@/components/FloweringSchedule";
+import FloweringStatusCard from "@/components/FloweringStatusCard";
 import FertilizerSection from "@/components/FertilizerSection";
 import EndOfPeriodCard from "@/components/EndOfPeriodCard";
 import { useBoxControllerContext } from "@/context/BoxControllerContext";
@@ -64,7 +64,7 @@ export default function FloweringRequired() {
 
   return (
     <>
-      <FloweringSchedule />
+      <FloweringStatusCard />
       {currentWeek >= END_OF_PERIOD_WEEK ? (
         <EndOfPeriodCard />
       ) : (

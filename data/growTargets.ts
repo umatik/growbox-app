@@ -25,3 +25,20 @@ export const VEG_TARGETS: { lightsOn: PhaseTargets; lightsOff: PhaseTargets } =
       humidity: { min: 52, max: 62, ideal: 57 },
     },
   };
+
+// Flowering, early to mid weeks. Temperature a bit lower than veg (LED-lit
+// canopy, 22-26 °C), lights off a few degrees cooler. Humidity from VPD
+// ~1.0-1.5 kPa: 40-55 %, late flower should drift towards 40-45 %.
+export const FLOWER_TARGETS: {
+  lightsOn: PhaseTargets;
+  lightsOff: PhaseTargets;
+} = {
+  lightsOn: {
+    temperature: { min: 22, max: 26, ideal: 24 },
+    humidity: { min: 40, max: 55, ideal: 48 },
+  },
+  lightsOff: {
+    temperature: { min: 18, max: 22, ideal: 20 },
+    humidity: { min: 40, max: 55, ideal: 48 },
+  },
+};

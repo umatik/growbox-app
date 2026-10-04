@@ -65,6 +65,7 @@ export function BoxControllerProvider({
   const setFlowering = useBoxStore((state) => state.setFlowering);
   const setFeeding = useBoxStore((state) => state.setFeeding);
   const setRssi = useBoxStore((state) => state.setRssi);
+  const setHumidifier = useBoxStore((state) => state.setHumidifier);
 
   const handleResponse = useCallback(
     (response: EspResponse) => {
@@ -86,16 +87,35 @@ export function BoxControllerProvider({
 
       setDayLevel(response.config.dimmer.day.level);
       // older firmware has no fanLevel - the day level is what runs then
-      setFanLevel(
-        response.status.fanLevel ?? response.config.dimmer.day.level,
-      );
+      setFanLevel(response.status.fanLevel ?? response.config.dimmer.day.level);
       setFanAuto(Boolean(response.config.fanAuto?.enabled));
       setRssi(response.status.rssi ?? null);
+
+      const humidifier = response.status.humidifier;
+      const humidifierConfig = response.config.humidifier;
+
+      if (humidifier && humidifierConfig) {
+        const band =
+          response.status.mode === "AUTO"
+            ? humidifierConfig.auto
+            : humidifierConfig.manual;
+
+        setHumidifier({
+          online: humidifier.online,
+          on: humidifier.on,
+          enabled: band.enabled,
+          min: band.min,
+          max: band.max,
+        });
+      } else {
+        setHumidifier(null);
+      }
 
       setNightFanEnabled(Boolean(response.config.auto.nightFan.enabled));
 
       setFlowering({
         startDate: response.config.auto.floweringStartDate,
+        startedAt: response.config.auto.floweringStartedAt ?? null,
       });
 
       if (response.config.feeding) {
@@ -121,6 +141,7 @@ export function BoxControllerProvider({
       setFlowering,
       setFeeding,
       setRssi,
+      setHumidifier,
     ],
   );
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "@/utils/haptics";
@@ -10,6 +10,18 @@ import { useBoxControllerContext } from "@/context/BoxControllerContext";
 import { useFeedingStatus } from "@/hooks/useFeedingStatus";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+// after a watering the button stays locked this long, so it isn't logged twice
+const LOCK_MS = DAY_MS;
+const LOCK_TICK_MS = 60 * 1000;
+
+// ms left until the button unlocks, 0 = free
+function getLockLeft(lastFedAt: string | null, now: number) {
+  if (!lastFedAt) return 0;
+
+  const fedAt = Date.parse(lastFedAt);
+
+  return Number.isNaN(fedAt) ? 0 : Math.max(0, fedAt + LOCK_MS - now);
+}
 
 function getLastFedLabel(lastFedAt: string | null) {
   if (!lastFedAt) return "Never";
@@ -37,17 +49,28 @@ export default function FeedingCard() {
       : status === "overdue"
         ? COLORS.red
         : COLORS.yellow;
-  // the frame follows the watering status in both modes, like the
-  // flowering progress bar: green on time, yellow late, red missed
+  const { logFeeding } = useBoxControllerContext();
+
+  const [saving, setSaving] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const lockLeft = getLockLeft(lastFedAt, now);
+  const locked = lockLeft > 0;
+  // plain frame like the other cards; only a late (yellow) or missed (red)
+  // watering colours it
   const borderColor =
     status === "overdue"
       ? COLORS.red
       : status === "late"
         ? COLORS.yellow
-        : COLORS.green;
-  const { logFeeding } = useBoxControllerContext();
+        : COLORS.border;
 
-  const [saving, setSaving] = useState(false);
+  // re-check every minute while locked, so the button frees up by itself
+  useEffect(() => {
+    if (!locked) return;
+
+    const interval = setInterval(() => setNow(Date.now()), LOCK_TICK_MS);
+    return () => clearInterval(interval);
+  }, [locked]);
   // the buttons only open a slide-to-confirm sheet, so a stray tap can't
   // log a watering
   const [confirming, setConfirming] = useState(false);
@@ -58,6 +81,7 @@ export default function FeedingCard() {
     try {
       setSaving(true);
       await logFeeding(new Date().toISOString());
+      setNow(Date.now());
       Haptics.notify(Haptics.NotificationFeedbackType.Success);
       setConfirming(false);
     } catch {
@@ -156,12 +180,20 @@ export default function FeedingCard() {
         </Text>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        onPress={openConfirm}
-      >
-        <Text style={styles.buttonText}>Feeded</Text>
-      </Pressable>
+      {locked ? (
+        // fed within the last 24 h: no button, just a done badge
+        <View style={styles.done}>
+          <Ionicons name="checkmark-circle" size={22} color={COLORS.green} />
+          <Text style={styles.doneText}>Feeded</Text>
+        </View>
+      ) : (
+        <Pressable
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+          onPress={openConfirm}
+        >
+          <Text style={styles.buttonText}>Feeded</Text>
+        </Pressable>
+      )}
 
       {confirmSheet}
     </View>
@@ -245,6 +277,22 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: COLORS.surfaceLight,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  done: {
+    minWidth: 76,
+    height: 40,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+
+  doneText: {
+    color: COLORS.green,
     fontSize: 15,
     fontWeight: "700",
   },

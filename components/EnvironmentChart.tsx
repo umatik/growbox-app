@@ -11,7 +11,7 @@ import { EnvironmentRow } from "@/shared/interfaces/esp.interface";
 import Text from "@/components/AppText";
 import { COLORS } from "@/constants/Colors";
 import { useBoxStore } from "@/store";
-import { PhaseTargets, VEG_TARGETS } from "@/data/growTargets";
+import { FLOWER_TARGETS, PhaseTargets, VEG_TARGETS } from "@/data/growTargets";
 import {
   parseEspDate,
   thin,
@@ -20,8 +20,10 @@ import {
 
 // Readings are drawn as plain values, each metric on its own scale (like the
 // desktop chart). The blocks behind them are the optimal range of each metric
-// for the light at that time - MANUAL (veg) keeps it on nonstop, AUTO follows
-// the light schedule.
+// for the light at that time - MANUAL (veg) keeps it on nonstop, AUTO
+// (flowering) follows the light schedule with its own ranges. In AUTO the
+// readings before the flowering start date keep the veg ranges, and a marker
+// shows where flowering began.
 
 // each metric always on the same fixed scale, whatever the readings
 const FIXED_SCALES: Record<Metric, { min: number; max: number }> = {
@@ -33,6 +35,7 @@ const TEMPERATURE_COLOR = COLORS.yellow;
 const HUMIDITY_COLOR = COLORS.blue;
 const FEED_COLOR = COLORS.green;
 const FEED_BAR_WIDTH = 4;
+const FLOWER_COLOR = COLORS.purple;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -92,14 +95,43 @@ function isLightOn(time: number, on: string, off: string) {
     : minutes >= onMinutes || minutes < offMinutes;
 }
 
-// stretches of the same light phase between start and end
-function schedulePhases(start: number, end: number, on: string, off: string) {
+// "YYYY-MM-DD" -> local midnight, null when unset or invalid
+function parseStartDate(date: string | null) {
+  if (!date) return null;
+
+  const [year, month, day] = date.split("-").map(Number);
+  const time = new Date(year, month - 1, day).getTime();
+
+  return Number.isNaN(time) ? null : time;
+}
+
+// "YYYY-MM-DD HH:MM:SS" -> time, null when unset or malformed
+function parseStartedAt(value: string | null) {
+  if (!value?.includes(" ")) return null;
+
+  const time = parseEspDate(value);
+
+  return Number.isNaN(time) ? null : time;
+}
+
+// stretches of the same targets between start and end: veg (light on
+// nonstop) before flowerFrom, flowering by the light schedule after it
+function schedulePhases(
+  start: number,
+  end: number,
+  on: string,
+  off: string,
+  flowerFrom: number,
+) {
   const phases: Phase[] = [];
 
   for (let time = start; time < end; time += PHASE_SAMPLE_MS) {
-    const targets = isLightOn(time, on, off)
-      ? VEG_TARGETS.lightsOn
-      : VEG_TARGETS.lightsOff;
+    const targets =
+      time < flowerFrom
+        ? VEG_TARGETS.lightsOn
+        : isLightOn(time, on, off)
+          ? FLOWER_TARGETS.lightsOn
+          : FLOWER_TARGETS.lightsOff;
     const last = phases[phases.length - 1];
     const to = Math.min(time + PHASE_SAMPLE_MS, end);
 
@@ -144,6 +176,8 @@ export default function EnvironmentChart() {
   const mode = useBoxStore((state) => state.mode);
   const lightsOn = useBoxStore((state) => state.scheduler.on);
   const lightsOff = useBoxStore((state) => state.scheduler.off);
+  const floweringStart = useBoxStore((state) => state.flowering.startDate);
+  const floweringStartedAt = useBoxStore((state) => state.flowering.startedAt);
 
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [activeTime, setActiveTime] = useState<number | null>(null);
@@ -182,21 +216,31 @@ export default function EnvironmentChart() {
     );
 
     // every 4th reading, counted back from the newest so it stays on the plot
-    return day.filter(
-      (_, index) => (day.length - 1 - index) % DAY_STEP === 0,
-    );
+    return day.filter((_, index) => (day.length - 1 - index) % DAY_STEP === 0);
   }, [allPoints, weekPoints, range, start, end]);
 
   const plotWidth = Math.max(size.width - PLOT_INSET_RIGHT, 1);
   const x = (time: number) =>
     ((time - start) / Math.max(end - start, 1)) * plotWidth;
 
+  // AUTO without a start date: the whole range counts as flowering
+  const flowerFrom =
+    mode === "AUTO"
+      ? (parseStartedAt(floweringStartedAt) ??
+        parseStartDate(floweringStart) ??
+        -Infinity)
+      : null;
+  const flowerMarker =
+    flowerFrom !== null && flowerFrom > start && flowerFrom <= end
+      ? flowerFrom
+      : null;
+
   const phases = useMemo(
     () =>
-      mode === "AUTO"
-        ? schedulePhases(start, end, lightsOn, lightsOff)
+      flowerFrom !== null
+        ? schedulePhases(start, end, lightsOn, lightsOff, flowerFrom)
         : [{ from: start, to: end, targets: VEG_TARGETS.lightsOn }],
-    [mode, start, end, lightsOn, lightsOff],
+    [flowerFrom, start, end, lightsOn, lightsOff],
   );
 
   const scales = points.length ? FIXED_SCALES : null;
@@ -344,8 +388,7 @@ export default function EnvironmentChart() {
   function scrubAt(locationX: number) {
     if (!size.width || !points.length) return;
 
-    const time =
-      start + (locationX / plotWidth) * (end - start);
+    const time = start + (locationX / plotWidth) * (end - start);
     let nearest = points[0];
 
     points.forEach((point) => {
@@ -401,6 +444,9 @@ export default function EnvironmentChart() {
             value={reading && `${reading.row.humidity.toFixed(0)}%`}
           />
           <LegendItem color={FEED_COLOR} label="Fed" bar />
+          {flowerMarker !== null && (
+            <LegendItem color={FLOWER_COLOR} label="Flower" bar />
+          )}
         </View>
 
         <Text style={styles.range}>
@@ -472,6 +518,19 @@ export default function EnvironmentChart() {
               stroke={COLORS.border}
               strokeWidth={1}
             />
+
+            {/* veg | flowering boundary */}
+            {flowerMarker !== null && (
+              <Line
+                x1={x(flowerMarker)}
+                x2={x(flowerMarker)}
+                y1={0}
+                y2={size.height}
+                stroke={FLOWER_COLOR}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+              />
+            )}
 
             {chart.feeds.map((time) => (
               <Rect

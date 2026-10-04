@@ -22,12 +22,23 @@ export interface DeviceState {
   fanAuto: boolean;
 }
 
+export interface HumidifierState {
+  online: boolean;
+  on: boolean;
+  // band of the current mode; disabled = the ESP never turns it on
+  enabled: boolean;
+  min: number;
+  max: number;
+}
+
 export interface AutoState {
   nightFanEnabled: boolean;
 }
 
 export interface FloweringState {
   startDate: string | null;
+  // exact start time from the ESP, null when unknown
+  startedAt: string | null;
   currentWeek: number;
   progress: number;
 }
@@ -55,6 +66,8 @@ interface BoxStore {
   feeding: FeedingState;
   // ESP WiFi signal in dBm, null = unknown
   rssi: number | null;
+  // null = firmware without a humidifier
+  humidifier: HumidifierState | null;
 
   setMode: (mode: BoxMode) => void;
   setLastConnectedMode: (mode: BoxMode) => void;
@@ -77,6 +90,7 @@ interface BoxStore {
   setScheduler: (scheduler: Partial<SchedulerState>) => void;
   setFeeding: (feeding: Partial<FeedingState>) => void;
   setRssi: (rssi: number | null) => void;
+  setHumidifier: (humidifier: HumidifierState | null) => void;
 
   reset: () => void;
 }
@@ -111,6 +125,7 @@ const initialState = {
 
   flowering: {
     startDate: null,
+    startedAt: null,
     currentWeek: 1,
     progress: 0,
   },
@@ -127,6 +142,7 @@ const initialState = {
   },
 
   rssi: null as number | null,
+  humidifier: null as HumidifierState | null,
 };
 
 export const useBoxStore = create<BoxStore>((set) => ({
@@ -134,12 +150,12 @@ export const useBoxStore = create<BoxStore>((set) => ({
 
   setMode: (mode) => set({ mode }),
 
-  setLastConnectedMode: (mode) =>
-    set({ lastConnectedMode: mode }),
+  setLastConnectedMode: (mode) => set({ lastConnectedMode: mode }),
 
   setState: (state) => set({ state }),
 
   setRssi: (rssi) => set({ rssi }),
+  setHumidifier: (humidifier) => set({ humidifier }),
 
   setSensor: (sensor) =>
     set((current) => ({

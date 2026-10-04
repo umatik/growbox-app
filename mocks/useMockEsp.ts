@@ -61,6 +61,7 @@ const createInitialResponse = (): EspResponse =>
       mode: MOCK_IDEAL ? "MANUAL" : "AUTO",
       state: "DAY",
       rssi: -64,
+      humidifier: { online: true, want: true, on: true },
     },
     sensor: {
       temperature: 24.6,
@@ -92,6 +93,10 @@ const createInitialResponse = (): EspResponse =>
         maxLevel: 100,
         day: { min: 24, max: 26 },
         night: { min: 20, max: 22 },
+      },
+      humidifier: {
+        manual: { enabled: true, min: 60, max: 65 },
+        auto: { enabled: false, min: 45, max: 50 },
       },
     },
   }) as EspResponse;
