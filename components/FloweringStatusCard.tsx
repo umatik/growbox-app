@@ -77,10 +77,12 @@ export default function FloweringStatusCard() {
   // late watering turns the ring yellow, a missed one red
   const { status } = useFeedingStatus();
   const fanLevel = useBoxStore((state) => state.devices.fanLevel);
+  const fanOn = useBoxStore((state) => state.devices.fan);
   const humidifier = useBoxStore((state) => state.humidifier);
 
   const week = Math.min(currentWeek, TOTAL_WEEKS);
-  const pct = Math.round(Math.min(100, Math.max(0, fanLevel)));
+  // the dimmer keeps its level while the fan relay is off - that is 0 %
+  const pct = fanOn ? Math.round(Math.min(100, Math.max(0, fanLevel))) : 0;
   const ringColor =
     status === "overdue"
       ? COLORS.red

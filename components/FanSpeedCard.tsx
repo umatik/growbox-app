@@ -20,12 +20,14 @@ function getLevelLabel(pct: number) {
 
 export default function FanSpeedCard() {
   const fanLevel = useBoxStore((state) => state.devices.fanLevel);
+  const fanOn = useBoxStore((state) => state.devices.fan);
   const humidifier = useBoxStore((state) => state.humidifier);
   const compact = useCompactLayout();
   // with a humidifier the card splits into two halves - no room for the pill
   const split = humidifier !== null;
 
-  const pct = Math.round(Math.min(100, Math.max(0, fanLevel)));
+  // the dimmer keeps its level while the fan relay is off - that is 0 %
+  const pct = fanOn ? Math.round(Math.min(100, Math.max(0, fanLevel))) : 0;
   const isOff = pct === 0;
 
   return (
