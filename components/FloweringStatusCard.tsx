@@ -117,7 +117,8 @@ export default function FloweringStatusCard() {
         <FanGauge pct={pct} />
         <View style={styles.info}>
           <Text style={styles.detail} numberOfLines={1}>
-            {pct === 0 ? "off" : `${pct}%`}
+            {/* stopped by its relay: still show the level it is set to */}
+            {fanOn ? `${pct}%` : `off · ${Math.round(fanLevel)}%`}
           </Text>
         </View>
       </View>
