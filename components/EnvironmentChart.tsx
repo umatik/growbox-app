@@ -27,7 +27,8 @@ import {
 
 // each metric always on the same fixed scale, whatever the readings
 const FIXED_SCALES: Record<Metric, { min: number; max: number }> = {
-  temperature: { min: 20, max: 30 },
+  // down to 15 °C: early mornings with the lights off get that cold
+  temperature: { min: 15, max: 30 },
   humidity: { min: 30, max: 90 },
 };
 
