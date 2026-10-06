@@ -11,6 +11,11 @@ import useEsp from "@/shared/hooks/useEsp";
 import useMockEsp from "@/mocks/useMockEsp";
 import { EspResponse } from "@/shared/interfaces/esp.interface";
 import { useBoxStore } from "@/store";
+import {
+  discoverEsp,
+  loadSavedApiUrl,
+  saveApiUrl,
+} from "@/shared/services/espDiscovery";
 
 type BoxController = ReturnType<typeof useEsp>;
 
@@ -22,6 +27,14 @@ const INITIAL_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 1000;
 
 const CONNECTION_LOST = new Error("Connection lost");
+
+// after a router reset the ESP may come back under a new IP: once the
+// connection counts as lost, look for it in the network - at most this often
+const DISCOVERY_COOLDOWN_MS = 60_000;
+
+const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const API_TOKEN = process.env.EXPO_PUBLIC_API_TOKEN ?? "";
+const OFFLINE_MODE = process.env.EXPO_PUBLIC_OFFLINE_MODE === "true";
 
 interface BoxControllerContextValue extends BoxController {
   initialLoading: boolean;
@@ -145,16 +158,45 @@ export function BoxControllerProvider({
     ],
   );
 
+  // the last address the ESP answered on, else the one from .env
+  const [apiUrl, setApiUrl] = useState(() => loadSavedApiUrl() ?? ENV_API_URL);
+
   const realController = useEsp({
-    apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
-    apiToken: process.env.EXPO_PUBLIC_API_TOKEN ?? "",
+    apiUrl,
+    apiToken: API_TOKEN,
     onResponse: handleResponse,
   });
 
   const mockController = useMockEsp(handleResponse);
 
-  const offlineMode = process.env.EXPO_PUBLIC_OFFLINE_MODE === "true";
-  const controller = offlineMode ? mockController : realController;
+  const controller = OFFLINE_MODE ? mockController : realController;
+
+  const discovering = useRef(false);
+  const lastDiscovery = useRef(0);
+
+  const findController = useCallback(async () => {
+    if (
+      OFFLINE_MODE ||
+      discovering.current ||
+      Date.now() - lastDiscovery.current < DISCOVERY_COOLDOWN_MS
+    ) {
+      return;
+    }
+
+    discovering.current = true;
+    lastDiscovery.current = Date.now();
+
+    try {
+      const found = await discoverEsp(apiUrl, API_TOKEN);
+
+      if (found && found !== apiUrl) {
+        saveApiUrl(found);
+        setApiUrl(found);
+      }
+    } finally {
+      discovering.current = false;
+    }
+  }, [apiUrl]);
 
   // The ESP serves requests one at a time, so requests that pile up on a
   // weak link (a poll every 5 s with a 10 s timeout, plus the auto retry)
@@ -187,11 +229,12 @@ export function BoxControllerProvider({
 
       if (failures.current >= FAILURES_BEFORE_LOST) {
         setConnectionLost(true);
+        void findController();
       }
 
       return false;
     }
-  }, [fetchConfigOnce]);
+  }, [fetchConfigOnce, findController]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,6 +250,7 @@ export function BoxControllerProvider({
           if (attempt === INITIAL_ATTEMPTS) {
             failures.current = FAILURES_BEFORE_LOST;
             setConnectionLost(true);
+            void findController();
           } else {
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
           }
@@ -223,7 +267,7 @@ export function BoxControllerProvider({
     return () => {
       cancelled = true;
     };
-  }, [fetchConfigOnce]);
+  }, [fetchConfigOnce, findController]);
 
   const reloadConnection = useCallback(async () => {
     setConnectionDismissed(false);
