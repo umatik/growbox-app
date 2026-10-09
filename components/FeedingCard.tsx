@@ -38,17 +38,15 @@ function getLastFedLabel(lastFedAt: string | null) {
 export default function FeedingCard() {
   const lastFedAt = useBoxStore((state) => state.feeding.lastFedAt);
   const count = useBoxStore((state) => state.feeding.count);
-  const mode = useBoxStore((state) => state.mode);
   const { status } = useFeedingStatus();
 
-  // Manual has no week progress bar, so the card itself shows a late (yellow)
-  // or missed (red) watering; in Auto the flowering progress bar does
+  // day 3 without a feeding turns the card yellow, day 4 red
   const warningColor =
-    mode !== "MANUAL" || status === "ok"
-      ? null
-      : status === "overdue"
-        ? COLORS.red
-        : COLORS.yellow;
+    status === "overdue"
+      ? COLORS.red
+      : status === "late"
+        ? COLORS.yellow
+        : null;
   const { logFeeding } = useBoxControllerContext();
 
   const [saving, setSaving] = useState(false);

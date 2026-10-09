@@ -1,13 +1,20 @@
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { useBoxStore } from "@/store";
-import { AUTO_THRESHOLDS, MANUAL_THRESHOLDS } from "@/hooks/useFeedingStatus";
+import { LATE_AFTER_DAYS, OVERDUE_AFTER_DAYS } from "@/hooks/useFeedingStatus";
 
-// reminders fire in the evening, when watering usually happens
+// the yellow reminder fires in the evening, when watering usually happens
 const REMINDER_HOUR = 19;
 
-const LATE_ID = "watering-late";
-const OVERDUE_ID = "watering-overdue";
+// once red, the alert repeats every 2 h during the day, for up to a week
+// (iOS keeps at most 64 scheduled notifications per app)
+const ALERT_FIRST_HOUR = 8;
+const ALERT_LAST_HOUR = 22;
+const ALERT_EVERY_HOURS = 2;
+const ALERT_DAYS = 7;
+
+const ID_PREFIX = "watering-";
+const LATE_ID = `${ID_PREFIX}late`;
 
 // show reminders as banners even while the app is open
 Notifications.setNotificationHandler({
@@ -19,15 +26,27 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// local midnight of the day `days` after `time`, then REMINDER_HOUR
-function reminderAt(time: number, days: number) {
+// local midnight of the day `days` after `time`, then `hour`
+function reminderAt(time: number, days: number, hour: number) {
   const date = new Date(time);
 
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + days);
-  date.setHours(REMINDER_HOUR);
+  date.setHours(hour);
 
   return date;
+}
+
+async function cancelAll() {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+  await Promise.all(
+    scheduled
+      .filter((request) => request.identifier.startsWith(ID_PREFIX))
+      .map((request) =>
+        Notifications.cancelScheduledNotificationAsync(request.identifier),
+      ),
+  );
 }
 
 async function schedule(
@@ -35,8 +54,6 @@ async function schedule(
   date: Date,
   content: Notifications.NotificationContentInput,
 ) {
-  await Notifications.cancelScheduledNotificationAsync(identifier);
-
   // a reminder whose time has passed is not re-fired on every sync
   if (date.getTime() <= Date.now()) return;
 
@@ -47,17 +64,14 @@ async function schedule(
   });
 }
 
-// Local reminders, rescheduled whenever the last feeding or the mode
-// changes: a gentle one when watering is late, a time-sensitive one (breaks
-// through Focus) when it was missed. No server needed - iOS fires them even
-// with the app closed.
+// Local reminders, rescheduled whenever the last feeding changes: a gentle
+// one on day 3 (yellow), then from day 4 (red) a time-sensitive alert
+// (breaks through Focus) every 2 h until the plant is fed. No server needed -
+// iOS fires them even with the app closed.
 export function useWateringReminders() {
   const lastFedAt = useBoxStore((state) => state.feeding.lastFedAt);
-  const mode = useBoxStore((state) => state.mode);
 
   useEffect(() => {
-    const thresholds = mode === "MANUAL" ? MANUAL_THRESHOLDS : AUTO_THRESHOLDS;
-
     const sync = async () => {
       const { granted } = await Notifications.requestPermissionsAsync({
         ios: { allowAlert: true, allowSound: true, allowBadge: false },
@@ -65,33 +79,45 @@ export function useWateringReminders() {
 
       if (!granted) return;
 
+      await cancelAll();
+
       // nothing recorded yet: there is no date to count from
-      if (!lastFedAt) {
-        await Notifications.cancelScheduledNotificationAsync(LATE_ID);
-        await Notifications.cancelScheduledNotificationAsync(OVERDUE_ID);
-        return;
-      }
+      if (!lastFedAt) return;
 
       const fedAt = Date.parse(lastFedAt);
 
-      await schedule(LATE_ID, reminderAt(fedAt, thresholds.lateAfterDays), {
-        title: "Time to water",
-        body: `Last watering was ${thresholds.lateAfterDays} days ago.`,
-      });
-
       await schedule(
-        OVERDUE_ID,
-        reminderAt(fedAt, thresholds.overdueAfterDays),
+        LATE_ID,
+        reminderAt(fedAt, LATE_AFTER_DAYS, REMINDER_HOUR),
         {
-          title: "Watering missed",
-          body: `The plant hasn't been watered for ${thresholds.overdueAfterDays} days.`,
-          interruptionLevel: "timeSensitive",
+          title: "Time to water",
+          body: `Last watering was ${LATE_AFTER_DAYS} days ago.`,
         },
       );
+
+      for (let day = 0; day < ALERT_DAYS; day++) {
+        const days = OVERDUE_AFTER_DAYS + day;
+
+        for (
+          let hour = ALERT_FIRST_HOUR;
+          hour <= ALERT_LAST_HOUR;
+          hour += ALERT_EVERY_HOURS
+        ) {
+          await schedule(
+            `${ID_PREFIX}overdue-${day}-${hour}`,
+            reminderAt(fedAt, days, hour),
+            {
+              title: "Watering missed",
+              body: `The plant hasn't been watered for ${days} days. Feed it now!`,
+              interruptionLevel: "timeSensitive",
+            },
+          );
+        }
+      }
     };
 
     sync().catch(() => {
       // reminders are best effort; the app shows the status anyway
     });
-  }, [lastFedAt, mode]);
+  }, [lastFedAt]);
 }

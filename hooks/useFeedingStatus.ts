@@ -1,24 +1,11 @@
 import { useBoxStore } from "@/store";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-// rhythm is feed, feed, break: after two day-to-day feedings the next one
-// is due on day 2; this many days without one is late / overdue
-export interface FeedingThresholds {
-  lateAfterDays: number;
-  overdueAfterDays: number;
-}
 
-export const AUTO_THRESHOLDS: FeedingThresholds = {
-  lateAfterDays: 2,
-  overdueAfterDays: 4,
-};
-
-// Manual runs a weaker light and less airflow, so the pot dries out slower
-// and a watering may come two days later before it counts as late
-export const MANUAL_THRESHOLDS: FeedingThresholds = {
-  lateAfterDays: 4,
-  overdueAfterDays: 6,
-};
+// whole days without a feeding before the status turns yellow / red; the
+// same in Auto and Manual
+export const LATE_AFTER_DAYS = 3;
+export const OVERDUE_AFTER_DAYS = 4;
 
 export type FeedingStatus = "ok" | "late" | "overdue";
 
@@ -34,33 +21,22 @@ export function daysSinceFeeding(history: string[], now = Date.now()) {
 
 export function feedingStatus(
   history: string[],
-  thresholds: FeedingThresholds,
   now = Date.now(),
 ): FeedingStatus {
+  const days = daysSinceFeeding(history, now);
+
   // never fed at all counts as a missed watering
-  if (!history.length) return "overdue";
-  if (history.length < 2) return "ok";
-
-  const last = dayIndex(Date.parse(history[history.length - 1]));
-  const previous = dayIndex(Date.parse(history[history.length - 2]));
-
-  if (last - previous !== 1) return "ok";
-
-  const days = dayIndex(now) - last;
-
-  if (days >= thresholds.overdueAfterDays) return "overdue";
-  if (days >= thresholds.lateAfterDays) return "late";
+  if (days === null || days >= OVERDUE_AFTER_DAYS) return "overdue";
+  if (days >= LATE_AFTER_DAYS) return "late";
 
   return "ok";
 }
 
 export function useFeedingStatus() {
   const history = useBoxStore((state) => state.feeding.history);
-  const mode = useBoxStore((state) => state.mode);
-  const thresholds = mode === "MANUAL" ? MANUAL_THRESHOLDS : AUTO_THRESHOLDS;
 
   return {
-    status: feedingStatus(history, thresholds),
+    status: feedingStatus(history),
     daysSince: daysSinceFeeding(history),
   };
 }

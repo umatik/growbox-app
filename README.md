@@ -30,9 +30,10 @@ talks to its HTTP API over the local WiFi.
 - **Fan:** live level; a fan stopped by its relay (e.g. night fan off)
   shows "off" with the level it is set to.
 - **Watering log:** "Feeded" / "Feed me now!" stores each feeding on the
-  controller, plus local reminders when a watering is late. After a
-  watering the button turns into a "Feeded" badge for 24 h; the frame
-  turns yellow when the next one is late and red when it is missed.
+  controller. After a watering the button turns into a "Feeded" badge
+  for 24 h; on day 3 without a feeding the card turns yellow (one evening
+  reminder), on day 4 red, with a time-sensitive alert every 2 h
+  (8:00-22:00) until the plant is fed.
 - **Flaky WiFi handling:** only several missed polls in a row count as a
   lost connection, and the app reconnects on its own.
 - **Offline mode:** a built-in mock controller with generated data, for
